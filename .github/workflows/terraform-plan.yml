@@ -1,0 +1,190 @@
+name: "Terraform Plan"
+
+env:
+  TF_LOG_PATH: ./terraform.log
+  TF_LOG: INFO #TRACE, DEBUG, INFO, WARN or ERROR
+
+permissions:
+  id-token: write
+  contents: read # This is required for actions/checkout
+  pull-requests: write
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - role-vending-machine/**
+
+jobs:
+  terraform-plan:
+    name: "Terraform Plan"
+    runs-on: ubuntu-latest
+    #    env:
+    #      TF_LOG: ${{ inputs.logLevel }}
+    defaults:
+      run:
+        working-directory: role-vending-machine
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Source Environment Variables
+        id: dotenv
+        uses: falti/dotenv-action@v1.0.2
+        with:
+          path: ".github/workflows/.env"
+
+      - name: Set Environment Variables
+        uses: c-py/action-dotenv-to-setenv@v4
+        with:
+          env-file: ".github/workflows/.env"
+
+      - name: Configure AWS Credentials for reading state
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.aws_account_id }}:role/${{ steps.dotenv.outputs.aws_workflow_role }}-readonly
+          role-session-name: ${{ github.actor }}_${{ github.job }}
+          aws-region: ${{ steps.dotenv.outputs.aws_region }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ steps.dotenv.outputs.TERRAFORM_VERSION }}
+
+      # - name: Get GitHub Apps Token # This enables access to Terraform modules in internal/private repos
+      #   id: get_token
+      #   uses: machine-learning-apps/actions-app-token@master
+      #   with:
+      #     APP_PEM: ${{ secrets.ORG_REPO_READ_PRIVATE_KEY }}
+      #     APP_ID: ${{ secrets.ORG_REPO_READ_APP_ID }}
+      #   # Doc: https://github.com/machine-learning-apps/actions-app-token
+      # - name: Enable Terraform Git actions to use Github Apps Token
+      #   uses: de-vri-es/setup-git-credentials@v2.0.10
+      #   with:
+      #     credentials: https://git:${{ steps.get_token.outputs.app_token }}@github.com
+      #   # Doc: https://maelvls.dev/gh-actions-with-tf-private-repo/
+      - name: Terraform Format
+        id: fmt
+        run: terraform fmt -check
+        # continue-on-error: true
+        # commented out, we'll fail if your PR doesn't pass `terraform fmt`
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -input=false -out=terraform.tfplan
+        continue-on-error: true
+
+      - name: Reformat Plan
+        if: steps.plan.outcome == 'success'
+        run: terraform show -no-color terraform.tfplan | sed -E 's/^([[:space:]]+)([-+])/\2\1/g' > plan.txt
+        #echo '${{ steps.plan.outputs.stdout || steps.plan.outputs.stderr }}' \
+        #| sed -E 's/^([[:space:]]+)([-+])/\2\1/g' > plan.txt
+
+      # GitHUB PR has 65k character limit: https://github.com/robburger/terraform-pr-commenter/issues/6
+      #    echo "$PLAN" >> $GITHUB_ENV
+      - name: Put Plan in Env Var
+        if: steps.plan.outcome == 'success'
+        run: |
+          PLAN=$(cat plan.txt)
+          echo "PLAN<<EOF" >> $GITHUB_ENV
+          echo "${PLAN:0:65536}" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - uses: actions/github-script@v6
+        # env:
+        #   ORIG_PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`\n
+            ${process.env.PLAN}
+            \`\`\`
+
+            </details>
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+      - name: Post Plan Success to GitHub PR
+        if: steps.plan.outcome == 'success'
+        uses: mshick/add-pr-comment@v2
+        with:
+          allow-repeats: true
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token-user-login: "github-actions[bot]"
+          message: |
+            ***Terraform Plan Diff***
+            ```diff
+            ${{ env.PLAN }}
+            ```
+
+      - name: Post Plan Failure to GitHub PR
+        if: steps.plan.outcome == 'failure'
+        uses: mshick/add-pr-comment@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token-user-login: "github-actions[bot]"
+          message: |
+            ## 🔴 Terraform Plan Creation Failed
+
+            ```
+            ${{ steps.plan.outputs.stderr }}
+            ```
+
+      # - name: Notify Mirosoft Teams On Success
+      #   if: steps.plan.outcome == 'success'
+      #   uses: jdcargile/ms-teams-notification@v1.3
+      #   with:
+      #     github-token: ${{ github.token }} # this will use the runner's token.
+      #     ms-teams-webhook-uri: ${{ secrets.TEAMS_WEBHOOK }}
+      #     notification-summary: Terraform Plan Successfully Created
+      #     notification-color: 34eb5c #Green
+      #     #timezone: America/Denver
+
+      # - name: Notify Mirosoft Teams On Failure
+      #   if: steps.plan.outcome == 'failure'
+      #   uses: jdcargile/ms-teams-notification@v1.3
+      #   with:
+      #     github-token: ${{ github.token }} # this will use the runner's token.
+      #     ms-teams-webhook-uri: ${{ secrets.TEAMS_WEBHOOK }}
+      #     notification-summary: Terraform Plan Creation Failed
+      #     notification-color: eb4034 #Red
+      #     #timezone: America/Denver
+
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      - name: Run Checkov Action
+        if: steps.plan.outcome == 'success'
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          quiet: true
+          soft_fail: false
+          framework: terraform
