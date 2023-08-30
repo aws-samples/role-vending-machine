@@ -42,7 +42,7 @@ jobs:
       #   # Doc: https://github.com/machine-learning-apps/actions-app-token
 
       - name: Configure AWS Credentials for reading state
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.aws_account_id }}:role/github-workflow-rvm
           role-session-name: ${{ github.actor }}_${{ github.job }}
