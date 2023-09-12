@@ -44,7 +44,7 @@ jobs:
           env-file: ".github/workflows/.env"
 
       - name: Configure AWS Credentials for reading state
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.aws_account_id }}:role/${{ steps.dotenv.outputs.aws_workflow_role }}-readonly
           role-session-name: ${{ github.actor }}_${{ github.job }}
