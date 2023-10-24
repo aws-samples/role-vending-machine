@@ -4,7 +4,7 @@ terraform {
     encrypt        = "true"
     bucket         = "<RVM HOME ACCOUNT ID>-tf-remote-state"
     dynamodb_table = "tf-state-lock"
-    key            = "git://github.com/realmidx-platform/realmidx-foundation.git/cis_alerting"
+    key            = "git://github.com/<GITHUB ORG>/<GITHUB REPO/<SUB KEY>" # This is only used to disambiguate content, it is a label
     region         = "us-west-2"
     profile        = "<RVM HOME ACCOUNT ID>"
   }
