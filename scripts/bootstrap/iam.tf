@@ -1,7 +1,7 @@
 ### IAM Role with OIDC trust for Read-only operations during planning ###
 module "workflow_role_readonly" {
-  source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc?ref=8af6d28"
-  version                        = "5.28.0"
+  source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+  version                        = "5.30.0"
   create_role                    = true
   role_name                      = "${var.iam_role_name}-readonly"
   provider_url                   = "https://token.actions.githubusercontent.com"
@@ -68,8 +68,8 @@ resource "aws_iam_role_policy" "workflow_role_management_readonly" {
 
 ### IAM Role with OIDC trust for creating resources ###
 module "workflow_role" {
-  source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc?ref=8af6d28"
-  version                        = "5.28.0"
+  source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+  version                        = "5.30.0"
   create_role                    = true
   role_name                      = var.iam_role_name
   provider_url                   = "https://token.actions.githubusercontent.com"
