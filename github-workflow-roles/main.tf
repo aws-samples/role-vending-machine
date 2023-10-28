@@ -2,7 +2,6 @@
 # github-pipeline-roles module
 # This is a helper module used to simplify deployment of GitHub workflow roles via the role vending machine.
 ################################################################################
-
 locals {
   aws_account_id = var.aws_account_id != "" ? var.aws_account_id : data.aws_caller_identity.current.account_id
 
@@ -15,6 +14,10 @@ locals {
     "repo:${var.github_organization_name}/${var.repository_name}:ref:refs/heads/${var.github_branch}",
     local.github_environment
   ])
+  # Readonly roles should be consumable by pull requests, or by the main branch (for use in workflow dispatches)
+  readonly_oidc_subscribers = concat(local.oidc_subscribers,
+    ["repo:${var.github_organization_name}/${var.repository_name}:pull_request"]
+  )
 
   managed_policies          = concat(var.managed_policies, ["arn:aws:iam::aws:policy/ReadOnlyAccess"])
   managed_policies_readonly = ["arn:aws:iam::aws:policy/ReadOnlyAccess"]
@@ -93,7 +96,7 @@ resource "aws_iam_role_policy" "workflow_role_state_access" {
           "dynamodb:DeleteItem"
         ],
         "Resource" : [
-          "arn:aws:dynamodb:*:${local.aws_account_id}:table/tf-state-lock"
+          "arn:aws:dynamodb:*:*:table/tf-state-lock"
         ]
       }
     ]
@@ -134,7 +137,7 @@ resource "aws_iam_role" "readonly" {
         "Action" : "sts:AssumeRoleWithWebIdentity",
         "Condition" : {
           "StringEquals" : {
-            "token.actions.githubusercontent.com:sub" : "repo:${var.github_organization_name}/${var.repository_name}:pull_request"
+            "token.actions.githubusercontent.com:sub" : local.readonly_oidc_subscribers
           },
           "StringLike" : {
             "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com"
@@ -174,7 +177,7 @@ resource "aws_iam_role_policy" "workflow_role_state_access_readonly" {
           "dynamodb:DeleteItem"
         ],
         "Resource" : [
-          "arn:aws:dynamodb:*:${local.aws_account_id}:table/tf-state-lock"
+          "arn:aws:dynamodb:*:*:table/tf-state-lock"
         ]
       }
     ]

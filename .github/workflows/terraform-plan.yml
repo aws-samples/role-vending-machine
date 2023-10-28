@@ -13,8 +13,7 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - role-vending-machine/**
+  workflow_dispatch:
 
 jobs:
   terraform-plan:
@@ -42,6 +41,9 @@ jobs:
         uses: c-py/action-dotenv-to-setenv@v4
         with:
           env-file: ".github/workflows/.env"
+
+      - name: Remove Write Providers File
+        run: rm zz-do-not-modify-providers.tf
 
       - name: Configure AWS Credentials for reading state
         uses: aws-actions/configure-aws-credentials@v4
