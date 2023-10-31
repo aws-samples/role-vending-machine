@@ -45,8 +45,8 @@ locals {
           "s3:DeleteObject",
         ],
         "Resource" : [
-          "arn:aws:s3:::${local.account_id}-tf-remote-state",
-          "arn:aws:s3:::${local.account_id}-tf-remote-state/*",
+          "arn:aws:s3:::${local.account_id}-${var.bucket_suffix}",
+          "arn:aws:s3:::${local.account_id}-${var.bucket_suffix}/*",
         ]
       },
       {
