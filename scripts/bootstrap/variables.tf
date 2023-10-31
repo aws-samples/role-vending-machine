@@ -37,3 +37,9 @@ variable "ddb_lock_table_name" {
   description = "Name of the Dynamo DB lock table used by RVM's bootstrap"
   default     = "tf-state-lock"
 }
+
+variable "bucket_suffix" {
+  type        = string
+  description = "The suffix (after the account ID) that identifies the Terraform S3 state bucket."
+  default     = "tf-remote-state"
+}
