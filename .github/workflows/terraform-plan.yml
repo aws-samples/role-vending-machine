@@ -51,7 +51,7 @@ jobs:
           aws-region: ${{ steps.dotenv.outputs.aws_region }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ steps.dotenv.outputs.TERRAFORM_VERSION }}
 
