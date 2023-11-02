@@ -2,9 +2,32 @@
 
 This repository is used to create roles for pipelines in GitHub. Be careful with this repository! It is inherently very powerful and you should add branch protection and PR reviews to ensure that unwanted changes are not made.
 
-This is the code supplement to the [Role Vending Machine APG](https://apg-library.amazonaws.com/content-viewer/author/215c590e-0c84-411d-be6e-b1739f1e19d2).
+This is the code supplement to an upcoming [Amazon Prescriptive Guidance](https://aws.amazon.com/prescriptive-guidance/) article. Full details are included in that guide.
 
-## One-time setup steps
+## Role Vending Workflow
+
+### Adding or updating a role
+
+1. Clone the repo (_if you haven't already_):<br>`git clone <repo git address>`
+2. Ensure you're on the main branch:<br>`git checkout main`
+3. Pull changes from the remote (_If you haven't just cloned_):<br>`git pull`
+4. Create your feature branch to make changes on:<br>`git checkout -b feature/AWS-XXXX`
+5. Make new changes by adding a new `.tf` file to the `role-vending-machine` subfolder, or updating an existing file. For an example, see the `example-security-inf-repo.tf.example` file.
+6. Add, Commit, and PR your changes to the `main` branch.
+
+### Pull Request Review Process
+
+Reviewers - Your work is crucial to maintaining a high level of code quality. Please consider the following while reviewing Pull Requests:
+
+- New Terraform role file names match the repository name
+- Terraform module identifiers are unique and specific to the repository
+- Correct provider names are used for the repository
+- Role policies do not contain hardcoded account numbers, and instead reference account IDs by the pre-generated variables
+- Role policies are least-permissive
+- Role policies do not contain wildcards `*` on principals
+- Role policies do not authorize principals outside of this AWS Organization
+
+## One-time initial deployment setup steps
 
 0. Determine which account will be the RVM home. Ideally, this account is an infrastructure deployment account and not the management/root account.
 1. Go to `https://github.com/organizations/YOUR_ORG/settings/actions` and check `Allow GitHub Actions to create and approve pull requests` (if you want to allow the `generate_providers_and_account_vars` workflow to create PRs)
@@ -39,38 +62,6 @@ This is the code supplement to the [Role Vending Machine APG](https://apg-librar
 7. Run the `generate_providers_and_account_vars` workflow via workflow dispatch.
 8. You will now be able to create GitHub workflow roles by adding TF files to the `role-vending-machine` folder.
 
-## Role Vending Workflow
-
-### Adding or updating a role
-
-1. Clone the repo (_if you haven't already_):<br>`git clone <repo git address>`
-2. Ensure you're on the main branch:<br>`git checkout main`
-3. Pull changes from the remote (_If you haven't just cloned_):<br>`git pull`
-4. Create your feature branch to make changes on:<br>`git checkout -b feature/AWS-XXXX`
-5. Make new changes.
-6. Add, Commit, and PR your changes to the `main` branch.
-
-### Pull Request Review Process
-
-Reviewers - Your work is crucial to maintaining a high level of code quality. Please consider the following while reviewing Pull Requests:
-
-- New Terraform role file names match the repository name
-- Terraform module identifiers are unique and specific to the repository
-- Correct provider names are used for the repository
-- Role policies do not contain hardcoded account numbers, and instead reference account IDs by the pre-generated variables
-- Role policies are least-permissive
-- Role policies do not contain wildcards `*` on principals
-- Role policies do not authorize principals outside of this AWS Organization
-
-## Repository Structure
-
-```sh
-.
-├── .github/workflows # <-- GitHub workflows used for Terraform Plan, Terraform Apply, and automatic provider/variable generation
-├── terraform         # <-- Roles provisioned by Terraform
-├── README.md         # <-- This file
-└── scripts           # <-- Helpful scripts, like for automatic provider/variable generation
-```
 
 ## Auto-magical `providers.tf` and `variables-accounts-<env>.tf`
 
@@ -81,3 +72,4 @@ How it works:
 - A GitHub workflow called `Generate Providers and Account Variables` runs on a daily schedule
 - The script at `scripts\generate_providers_and_account_vars.py` consumes JSON formatted account lists
 - Provider definitions and terraform variables files are generated and an automatic PR is cut if these files need to be updated.
+- Because RVM uses a separate set of roles for readonly/plan workflows, two sets of `providers.tf` files are generated: one for readonly and one for non-readonly. During plan pipeline runs, the non-readonly file should be removed. During apply pipeline runs, the readonly file should be removed. Don't remove the file manually, just run an `rm` command during the respective pipeline workflow.
