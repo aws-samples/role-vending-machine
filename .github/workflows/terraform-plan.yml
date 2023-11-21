@@ -38,7 +38,7 @@ jobs:
           path: ".github/workflows/.env"
 
       - name: Set Environment Variables
-        uses: c-py/action-dotenv-to-setenv@v4
+        uses: c-py/action-dotenv-to-setenv@v5
         with:
           env-file: ".github/workflows/.env"
 
