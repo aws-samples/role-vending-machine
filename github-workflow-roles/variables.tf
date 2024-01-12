@@ -80,3 +80,51 @@ variable "github_organization_name" {
   description = "Name of the GitHub Organization"
   type        = string
 }
+
+variable "principal_type" {
+  description = "Type of principal assuming the role (github, service, pod)"
+  type        = string
+  default     = "github"
+}
+
+variable "service_name" {
+  description = "List of services allowed to assume the role"
+  type        = list(string)
+  default     = []
+}
+
+variable "eks_cluster_arn" {
+  description = "List of cluster ARNs for pod principal type"
+  type        = list(string)
+  default     = []
+}
+
+variable "eks_cluster_name" {
+  description = "List of cluster names for pod principal type"
+  type        = list(string)
+  default     = []
+}
+
+variable "eks_namespaces" {
+  description = "List of Kubernetes namespaces for pod principal type"
+  type        = list(string)
+  default     = []
+}
+
+variable "eks_service_account" {
+  description = "List of Kubernetes service accounts for pod principal type"
+  type        = list(string)
+  default     = []
+}
+
+variable "include_account_condition" {
+  description = "Includes aws:SourceAccount condition for service principal type"
+  type        = bool
+  default     = true
+}
+
+variable "service_arn" {
+  description = "List of variable to include in role trust policy with aws:SourceArn condition key"
+  type        = list(string)
+  default     = []
+}

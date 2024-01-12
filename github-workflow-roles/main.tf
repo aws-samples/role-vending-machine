@@ -21,7 +21,6 @@ locals {
 
   managed_policies          = concat(var.managed_policies, ["arn:aws:iam::aws:policy/ReadOnlyAccess"])
   managed_policies_readonly = ["arn:aws:iam::aws:policy/ReadOnlyAccess"]
-
 }
 
 ################################################################################
@@ -37,29 +36,102 @@ resource "aws_iam_role" "main" {
   force_detach_policies = var.force_detach_policies
   permissions_boundary  = var.role_permissions_boundary_arn
 
-  assume_role_policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        "Sid" : "",
-        "Effect" : "Allow",
-        "Principal" : {
-          "Federated" : "arn:aws:iam::${local.aws_account_id}:oidc-provider/token.actions.githubusercontent.com"
-        },
-        "Action" : "sts:AssumeRoleWithWebIdentity",
-        "Condition" : {
-          "StringEquals" : {
-            "token.actions.githubusercontent.com:sub" : local.oidc_subscribers
-          },
-          "StringLike" : {
-            "token.actions.githubusercontent.com:aud" : "sts.amazonaws.com"
-          }
-        }
-      }
-    ]
-  })
+  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
 
   tags = var.tags
+}
+
+data "aws_iam_policy_document" "assume_role_policy" {
+  statement {
+    effect  = "Allow"
+    actions = var.principal_type == "pod" ? ["sts:AssumeRole", "sts:TagSession"] : var.principal_type == "service" ? ["sts:AssumeRole"] : ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = var.principal_type == "github" ? "Federated" : "Service"
+      identifiers = var.principal_type == "github" ? ["arn:aws:iam::${local.aws_account_id}:oidc-provider/token.actions.githubusercontent.com"] : var.principal_type == "pod" ? ["pods.eks.amazonaws.com"] : var.service_name
+    }
+
+    dynamic "condition" {
+      for_each = var.principal_type == "github" ? [1] : []
+      content {
+        test     = "StringEquals"
+        variable = "token.actions.githubusercontent.com:aud"
+        values   = ["sts.amazonaws.com"]
+      }
+    }
+
+    dynamic "condition" {
+      for_each = var.principal_type == "github" ? [1] : []
+      content {
+        test     = "StringEquals"
+        variable = "token.actions.githubusercontent.com:sub"
+        values   = local.oidc_subscribers
+      }
+    }
+
+    dynamic "condition" {
+      for_each = var.principal_type == "pod" && length(var.eks_cluster_arn) > 0 ? { "eks-cluster-arn" = var.eks_cluster_arn } : {}
+      content {
+        test     = "StringEquals"
+        variable = "aws:PrincipalTag/eks-cluster-arn"
+        values   = condition.value
+      }
+    }
+
+    dynamic "condition" {
+      for_each = var.principal_type == "pod" && length(var.eks_cluster_name) > 0 ? { "eks-cluster-name" = var.eks_cluster_name } : {}
+      content {
+        test     = "StringEquals"
+        variable = "aws:PrincipalTag/eks-cluster-name"
+        values   = condition.value
+      }
+    }
+
+    dynamic "condition" {
+      for_each = var.principal_type == "pod" && length(var.eks_namespaces) > 0 ? { "kubernetes-namespace" = var.eks_namespaces } : {}
+      content {
+        test     = "StringEquals"
+        variable = "aws:PrincipalTag/kubernetes-namespace"
+        values   = condition.value
+      }
+    }
+
+    dynamic "condition" {
+      for_each = var.principal_type == "pod" && length(var.eks_service_account) > 0 ? { "kubernetes-service-account" = var.eks_service_account } : {}
+      content {
+        test     = "StringEquals"
+        variable = "aws:PrincipalTag/kubernetes-service-account"
+        values   = condition.value
+      }
+    }
+
+    dynamic "condition" {
+      for_each = var.principal_type == "service" ? [1] : []
+      content {
+        test     = "StringEquals"
+        variable = "aws:SourceOrgID"
+        values   = ["$${aws:ResourceOrgId}"]
+      }
+    }
+
+    dynamic "condition" {
+      for_each = var.principal_type == "service" && var.include_account_condition ? { "source_account" = local.aws_account_id } : {}
+      content {
+        test     = "value"
+        variable = "aws:SourceAccount"
+        values   = [condition.value]
+      }
+    }
+
+    dynamic "condition" {
+      for_each = var.principal_type == "service" && length(var.service_arn) > 0 ? { "service-arns" = var.service_arn } : {}
+      content {
+        test     = "value"
+        variable = "aws:SourceArn"
+        values   = condition.value
+      }
+    }
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "custom" {
