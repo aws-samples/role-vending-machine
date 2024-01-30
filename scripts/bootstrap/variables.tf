@@ -16,13 +16,13 @@ variable "github_repo" {
 
 variable "iam_role_name" {
   type        = string
-  description = "Name of the IAM Role that RVM can assume in each account."
+  description = "Name of the role in the RVM account used to assume member account roles"
   default     = "github-workflow-rvm"
 }
 
 variable "iam_assuming_role_name" {
   type        = string
-  description = "Name of the role in the RVM account used to assume member account roles"
+  description = "Name of the IAM Role in each member account that RVM's main role can assume."
   default     = "github-assume-role-rvm"
 }
 
