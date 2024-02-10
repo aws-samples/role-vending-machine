@@ -26,7 +26,7 @@ resource "aws_iam_role_policy" "github_assume_role_rvm_management" {
           "iam:*Role*",
         ],
         "Resource" : [
-          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/github-workflow-role-*"
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/RVM/*"
         ]
       }
     ]

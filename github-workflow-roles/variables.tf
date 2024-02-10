@@ -25,7 +25,7 @@ variable "repository_name" {
 variable "role_path" {
   description = "Path of IAM role"
   type        = string
-  default     = "/"
+  default     = "/RVM/"
 }
 
 variable "role_permissions_boundary_arn" {
@@ -64,6 +64,13 @@ variable "inline_policy_readonly" {
   default     = ""
 }
 
+variable "principal_type" {
+  description = "Type of principal assuming the role (github, service, pod)"
+  type        = string
+  default     = "github"
+}
+
+# Variables for github principal type
 variable "github_environment" {
   description = "Github Environment for this role"
   type        = string
@@ -81,18 +88,8 @@ variable "github_organization_name" {
   type        = string
 }
 
-variable "principal_type" {
-  description = "Type of principal assuming the role (github, service, pod)"
-  type        = string
-  default     = "github"
-}
 
-variable "service_name" {
-  description = "List of services allowed to assume the role"
-  type        = list(string)
-  default     = []
-}
-
+# Variables for pod principal type
 variable "eks_cluster_arn" {
   description = "List of cluster ARNs for pod principal type"
   type        = list(string)
@@ -117,14 +114,45 @@ variable "eks_service_account" {
   default     = []
 }
 
-variable "include_account_condition" {
-  description = "Includes aws:SourceAccount condition for service principal type"
-  type        = bool
-  default     = true
+variable "pod_trust_policy_controls" {
+  description = "specifies conditions for pod identity trust policy"
+  type = object({
+    include_source_account          = bool
+    include_cluster_arns            = bool
+    include_cluster_names           = bool
+    include_cluster_namspaces       = bool
+    include_cluster_service_account = bool
+  })
+  default = {
+    include_cluster_arns            = false
+    include_cluster_names           = false
+    include_cluster_namspaces       = false
+    include_cluster_service_account = false
+    include_source_account          = false
+  }
 }
 
+# Variables for service principal type
 variable "service_arn" {
   description = "List of variable to include in role trust policy with aws:SourceArn condition key"
   type        = list(string)
   default     = []
+}
+
+variable "service_name" {
+  description = "List of services allowed to assume the role"
+  type        = list(string)
+  default     = []
+}
+
+variable "service_trust_policy_controls" {
+  description = "specifies conditions for service role trust policy"
+  type = object({
+    include_account_condition = bool
+    include_service_arn       = bool
+  })
+  default = {
+    include_account_condition = false
+    include_service_arn       = false
+  }
 }
