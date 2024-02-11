@@ -90,7 +90,7 @@ variable "github_organization_name" {
 
 
 # Variables for pod principal type
-variable "eks_cluster_arn" {
+variable "eks_cluster_arns" {
   description = "List of cluster ARNs for pod principal type"
   type        = list(string)
   default     = []

@@ -30,7 +30,7 @@ locals {
     include_cluster_service_account = true
   }
 
-  eks_cluster_arn     = local.pod_trust_policy_controls.include_cluster_arns ? var.eks_cluster_arn : []
+  eks_cluster_arns     = local.pod_trust_policy_controls.include_cluster_arns ? var.eks_cluster_arns : []
   eks_cluster_name    = local.pod_trust_policy_controls.include_cluster_names ? var.eks_cluster_name : []
   eks_namespaces      = local.pod_trust_policy_controls.include_cluster_namspaces ? var.eks_namespaces : []
   eks_service_account = local.pod_trust_policy_controls.include_cluster_service_account ? var.eks_service_account : []
@@ -100,10 +100,10 @@ data "aws_iam_policy_document" "assume_role_policy" {
     }
 
     dynamic "condition" {
-      for_each = var.principal_type == "pod" && length(local.eks_cluster_arn) > 0 ? { "eks-cluster-arn" = local.eks_cluster_arn } : {}
+      for_each = var.principal_type == "pod" && length(local.eks_cluster_arns) > 0 ? { "eks-cluster-arn" = local.eks_cluster_arns } : {}
       content {
-        test     = "StringEquals"
-        variable = "aws:PrincipalTag/eks-cluster-arn"
+        test     = "ArnEquals"
+        variable = "aws:SourceArn"
         values   = condition.value
       }
     }
