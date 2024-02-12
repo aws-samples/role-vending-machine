@@ -13,7 +13,7 @@ module "example_security_inf_repo_Production" {
   # Repository name in GitHub -- this must match the basename of this file
   repository_name = "example-security-inf-repo"
 
-  # Protected branch used by the repo, so that only workflows from that branch allow TF apply actions
+  # Protected branch used by the repo, so that only workflows from that branch allow write operations
   github_branch = "main"
 
   # Specify the least permissions required for this pipeline to run
