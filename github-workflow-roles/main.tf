@@ -156,7 +156,7 @@ data "aws_iam_policy_document" "assume_role_policy" {
     dynamic "condition" {
       for_each = var.principal_type == "service" && length(local.service_arn) > 0 ? { "service-arns" = local.service_arn } : {}
       content {
-        test     = "StringEquals"
+        test     = "ArnEquals"
         variable = "aws:SourceArn"
         values   = condition.value
       }
