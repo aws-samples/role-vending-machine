@@ -133,12 +133,6 @@ variable "pod_trust_policy_controls" {
 }
 
 # Variables for service principal type
-variable "service_arn" {
-  description = "List of variable to include in role trust policy with aws:SourceArn condition key"
-  type        = list(string)
-  default     = []
-}
-
 variable "service_name" {
   description = "List of services allowed to assume the role"
   type        = list(string)
@@ -149,10 +143,10 @@ variable "service_trust_policy_controls" {
   description = "specifies conditions for service role trust policy"
   type = object({
     include_account_condition = bool
-    include_service_arn       = bool
+    include_org_condition     = bool
   })
   default = {
     include_account_condition = false
-    include_service_arn       = false
+    include_org_condition     = false
   }
 }

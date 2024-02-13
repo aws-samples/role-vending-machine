@@ -30,17 +30,16 @@ locals {
     include_cluster_service_account = true
   }
 
-  eks_cluster_arns     = local.pod_trust_policy_controls.include_cluster_arns ? var.eks_cluster_arns : []
+  eks_cluster_arns    = local.pod_trust_policy_controls.include_cluster_arns ? var.eks_cluster_arns : []
   eks_cluster_name    = local.pod_trust_policy_controls.include_cluster_names ? var.eks_cluster_name : []
   eks_namespaces      = local.pod_trust_policy_controls.include_cluster_namspaces ? var.eks_namespaces : []
   eks_service_account = local.pod_trust_policy_controls.include_cluster_service_account ? var.eks_service_account : []
 
   service_trust_policy_controls = {
     include_account_condition = true
-    include_service_arn       = true
+    include_org_condition     = true
   }
 
-  service_arn = local.service_trust_policy_controls.include_service_arn ? var.service_arn : []
 }
 
 
@@ -136,7 +135,7 @@ data "aws_iam_policy_document" "assume_role_policy" {
     }
 
     dynamic "condition" {
-      for_each = var.principal_type == "service" ? [1] : []
+      for_each = var.principal_type == "service" && local.service_trust_policy_controls.include_org_condition ? [1] : []
       content {
         test     = "StringEquals"
         variable = "aws:SourceOrgID"
@@ -150,15 +149,6 @@ data "aws_iam_policy_document" "assume_role_policy" {
         test     = "StringEquals"
         variable = "aws:SourceAccount"
         values   = [condition.value]
-      }
-    }
-
-    dynamic "condition" {
-      for_each = var.principal_type == "service" && length(local.service_arn) > 0 ? { "service-arns" = local.service_arn } : {}
-      content {
-        test     = "ArnEquals"
-        variable = "aws:SourceArn"
-        values   = condition.value
       }
     }
   }
