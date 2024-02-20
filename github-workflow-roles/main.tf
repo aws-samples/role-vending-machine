@@ -7,7 +7,7 @@ locals {
 
   github_organization_name = var.principal_type == "github" ? var.github_organization_name : null
 
-  role_name        = var.principal_type == "github" ? coalesce(var.role_name, "github-workflow-role-${var.repository_name}") : var.role_name
+  role_name        = var.principal_type == "github" ? coalesce(var.role_name, "${var.repository_name}-repo-role") : var.role_name
   role_description = var.principal_type == "github" ? "Github Workflow Role for ${local.github_organization_name}/${var.repository_name}" : "IAM role created for ${var.principal_type} by Role Vending Machine"
 
   github_environment = var.github_environment != "" ? "repo:${local.github_organization_name}/${var.repository_name}:environment:${var.github_environment}" : ""
