@@ -84,8 +84,9 @@ variable "github_branch" {
 }
 
 variable "github_organization_name" {
-  description = "Name of the GitHub Organization"
+  description = "Name of the GitHub Organization - Required if 'principal_type' is 'github'"
   type        = string
+  default     = null
 }
 
 
