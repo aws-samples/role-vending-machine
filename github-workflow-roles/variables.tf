@@ -22,10 +22,10 @@ variable "repository_name" {
   default     = null
 }
 
-variable "role_path" {
-  description = "Path of IAM role"
-  type        = string
-  default     = "/RVM/"
+variable "role_description" {
+  description = "Role description"
+  type = string
+  default = null
 }
 
 variable "role_permissions_boundary_arn" {

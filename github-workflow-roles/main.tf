@@ -8,7 +8,7 @@ locals {
   github_organization_name = var.principal_type == "github" ? var.github_organization_name : null
 
   role_name        = var.principal_type == "github" ? coalesce(var.role_name, "${var.repository_name}-repo-role") : var.role_name
-  role_description = var.principal_type == "github" ? "Github Workflow Role for ${local.github_organization_name}/${var.repository_name}" : "IAM role created for ${var.principal_type} by Role Vending Machine"
+  role_description = var.principal_type == "github" ? "Github Workflow Role for ${local.github_organization_name}/${var.repository_name}" : coalesce(var.role_description, "IAM role created for by Role Vending Machine")
 
   github_environment = var.github_environment != "" ? "repo:${local.github_organization_name}/${var.repository_name}:environment:${var.github_environment}" : ""
 
@@ -52,7 +52,7 @@ locals {
 resource "aws_iam_role" "main" {
   name                 = local.role_name
   description          = local.role_description
-  path                 = var.role_path
+  path                 = "/RVM/"
   max_session_duration = var.max_session_duration
 
   force_detach_policies = var.force_detach_policies
@@ -215,7 +215,7 @@ resource "aws_iam_role" "readonly" {
   name = "${local.role_name}-readonly"
   #name_prefix          = var.role_name_prefix
   description          = local.role_description
-  path                 = var.role_path
+  path                 = "/RVM/"
   max_session_duration = var.max_session_duration
 
   force_detach_policies = var.force_detach_policies
