@@ -1,4 +1,5 @@
 # Terraform Remote State Management Resources
+# This may be better to provision via AFT, if you have that stood up
 
 resource "aws_dynamodb_table" "terraform_state_lock" {
   #checkov:skip=CKV2_AWS_16:Auto-scaling is unnecessary for this tiny table
@@ -42,7 +43,7 @@ resource "aws_s3_bucket" "tf_remote_state_bucket" {
   #checkov:skip=CKV_AWS_145:AWS-managed encryption is sufficient here
   #checkov:skip=CKV2_AWS_62:event notifications are unnecessary here
   #checkov:skip=CKV2_AWS_61:lifecycle configuration is present
-  bucket = "${local.account_id}-tf-remote-state"
+  bucket = "${data.aws_caller_identity.current.account_id}-tf-remote-state"
   tags = {
     terraform = "True"
   }

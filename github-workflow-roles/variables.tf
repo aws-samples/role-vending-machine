@@ -22,10 +22,10 @@ variable "repository_name" {
   default     = null
 }
 
-variable "role_path" {
-  description = "Path of IAM role"
-  type        = string
-  default     = "/"
+variable "role_description" {
+  description = "Role description"
+  type = string
+  default = null
 }
 
 variable "role_permissions_boundary_arn" {
@@ -64,6 +64,13 @@ variable "inline_policy_readonly" {
   default     = ""
 }
 
+variable "principal_type" {
+  description = "Type of principal assuming the role (github, service, pod)"
+  type        = string
+  default     = "github"
+}
+
+# Variables for github principal type
 variable "github_environment" {
   description = "Github Environment for this role"
   type        = string
@@ -77,6 +84,70 @@ variable "github_branch" {
 }
 
 variable "github_organization_name" {
-  description = "Name of the GitHub Organization"
+  description = "Name of the GitHub Organization - Required if 'principal_type' is 'github'"
   type        = string
+  default     = null
+}
+
+
+# Variables for pod principal type
+variable "eks_cluster_arns" {
+  description = "List of cluster ARNs for pod principal type"
+  type        = list(string)
+  default     = []
+}
+
+variable "eks_cluster_name" {
+  description = "List of cluster names for pod principal type"
+  type        = list(string)
+  default     = []
+}
+
+variable "eks_namespaces" {
+  description = "List of Kubernetes namespaces for pod principal type"
+  type        = list(string)
+  default     = []
+}
+
+variable "eks_service_account" {
+  description = "List of Kubernetes service accounts for pod principal type"
+  type        = list(string)
+  default     = []
+}
+
+variable "pod_trust_policy_controls" {
+  description = "specifies conditions for pod identity trust policy"
+  type = object({
+    include_source_account          = bool
+    include_cluster_arns            = bool
+    include_cluster_names           = bool
+    include_cluster_namspaces       = bool
+    include_cluster_service_account = bool
+  })
+  default = {
+    include_cluster_arns            = false
+    include_cluster_names           = false
+    include_cluster_namspaces       = false
+    include_cluster_service_account = false
+    include_source_account          = false
+  }
+}
+
+# Variables for service principal type
+variable "service_name" {
+  description = "List of services allowed to assume the role"
+  type        = list(string)
+  default     = []
+}
+
+variable "service_trust_policy_controls" {
+  description = "specifies conditions for service role trust policy"
+  type = object({
+    include_account_condition = bool
+    include_org_condition     = bool
+  })
+  default = {
+    include_account_condition = false
+    include_org_condition     = false
+  }
 }

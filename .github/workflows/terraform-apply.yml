@@ -68,6 +68,9 @@ jobs:
         with:
           env-file: ".github/workflows/.env"
 
+      - name: Remove Readonly Providers File
+        run: rm zz-do-not-modify-providers-readonly.tf
+
       - name: Configure AWS Credentials for creating resources
         #if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: aws-actions/configure-aws-credentials@v4
