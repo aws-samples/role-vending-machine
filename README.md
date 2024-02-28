@@ -56,11 +56,12 @@ Reviewers - Your work is crucial to maintaining a high level of code quality. Pl
    }
    ```
 3. Update `scripts/generate_providers_and_account_vars.py` and other locations (such as the `bootstrap` folder) with the appropriate region you operate in
-4. Update the `.github/workflows/.env` file with the account where your Role Vending Machine will live (and any other env data changes, like region)
-5. In the context of your RVM account, run a `terraform apply` from the `scripts/bootstrap` directory. This will create the required role for the RVM pipeline.
-6. Using a method such as AFT or StackSets, deploy the IAM role in the `scripts\assumed_role` folder to each account where you want RVM to be able to create pipeline roles.
-7. Run the `generate_providers_and_account_vars` workflow via workflow dispatch.
-8. You will now be able to create GitHub workflow roles by adding TF files to the `role-vending-machine` folder.
+4. Update the `zz-do-not-modify` TF files in the `role-vending-machine` directory to match the correct backend for your Terraform state (note: the "do not modify" directive is aimed at developers using this repository; RVM administrators may modify these manifests).
+5. Update the `.github/workflows/.env` file with the account where your Role Vending Machine will live (and any other env data changes, like region)
+6. In the context of your RVM account, run a `terraform apply` from the `scripts/bootstrap` directory. This will create the required role for the RVM pipeline.
+7. Using a method such as AFT or StackSets, deploy the IAM role in the `scripts\assumed_role` folder to each account where you want RVM to be able to create pipeline roles.
+8. Run the `generate_providers_and_account_vars` workflow via workflow dispatch.
+9. You will now be able to create GitHub workflow roles by adding TF files to the `role-vending-machine` folder.
 
 
 ## Auto-magical `providers.tf` and `variables-accounts-<env>.tf`
