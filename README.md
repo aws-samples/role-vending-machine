@@ -69,11 +69,11 @@ Replace the `<YOUR RVM Account ID>` in the policy above with RVM's account ID.
 
 Provide necessary information to prepare the repository for bootstrapping. Below is a list of files you need to modify:
 
-1. `.github/workflows/.env`: provide RVM account information, RVM role name, AWS region, and your GitHub organization name.
+1. `.github/workflows/.env`: provide RVM account ID, AWS region, and your GitHub organization name. All other fields are optional to update.
 2. `scripts/generate_providers_and_account_vars.py`: provide the main AWS region you operate in[^1].
 3. Navigate to `bootstrap` folder under scripts folder.
    1. Update `terraform.tfvars` file with your GitHub organization name and the default AWS region where RVM resources are deployed into.
-   2. Optionally, review the variables in `variables.tf` file and set your desired values in `terraform.tfvars` file. For example, if you want to deploy Terraform backend resources deployed in RVM account, set the value of `create_tf_state_management_infrastructure` variable to `true`.
+   2. Optionally, review the variables in `variables.tf` file and set your desired values in `terraform.tfvars` file. For example, if you want to deploy Terraform backend resources deployed in the RVM account, set the value of `create_tf_state_management_infrastructure` variable to `true`. If you want to use a repo name other than "role-vending-machine", you can set that in `terraform.tfvars` as well.
 
 [^1]: IAM resources are global, the Region you specify in `generate_providers_and_account_vars.py` is used to create the AWS providers in each account, this can later be used with Terraform data structures to dynamically reference the Region in your policies.
 
@@ -97,13 +97,18 @@ Figure below, shows the RVM bootstrapping process.
 2. From terminal, navigate to `scripts/bootstrap` folder
    1. In the context of your RVM account, run `terraform init` to initiate Terraform.
    2. Run `terraform apply`, review the changes and approve to deploy RVM resources to RVM account. This will deploy IAM Main Role, and optionally Terraform backend resources.
-3. Using a method such as AFT or StackSets, deploy RVM Workflow Role and create an IAM OIDC provider in the accounts where you expect RVM to deploy roles. You can find Terraform definitions for both of these resources in `scripts/assumed_role` and `scripts/oidc_provider` folders.
-4. From your repository’s main page, click on Actions, under All Workflows sections, click on *Generate Providers and Account Variables workflow*, and run the workflow. This will create the Terraform providers file in your repository.
-5. Update `role_vending_machine/zz-do-not-modify-backend.tf` file with RVM Terraform backend information.
-6. Update the `zz-do-not-modify` TF files in the `role-vending-machine` directory to match the correct backend for your Terraform state (note: the "do not modify" directive is aimed at developers using this repository; RVM administrators may modify these manifests).
-7. Run the `generate_providers_and_account_vars` workflow via workflow dispatch.
+  
+### Step 6: Deploying RVM-assumable roles across the AWS Organization
 
-### Step 6: Fine tuning RVM
+1. Using a method such as AFT or StackSets, deploy the RVM Workflow Role and create an IAM OIDC provider in each account where you expect RVM to deploy roles. You can find Terraform definitions for both of these resources in `scripts/assumed_role` and `scripts/oidc_provider` folders.
+2. Note that this step includes provisioning the IAM OIDC provider to the RVM account. Subsequent steps will not be possible without the OIDC setup.
+
+### Step 7: RVM variables and backend setup
+
+1. Update `role_vending_machine/zz-do-not-modify-backend.tf` file with RVM Terraform backend information (note: the "do not modify" directive is aimed at developers using this repository; RVM administrators may modify these manifests).
+2. From your repository’s main page, click on Actions, under All Workflows sections, click on *Generate Providers and Account Variables workflow*, and run the workflow. This will create the Terraform providers file in your repository.
+
+### Step 8: Fine tuning RVM
 
 With RVM, you can create IAM roles to be assumed by GitHub pipelines or AWS services with additional configurability for EKS Pod Identity roles. There are two local variables in RVM module's [main.tf](github-workflow-roles/main.tf) file allowing you to include additional conditions in the trust policy of the roles created for AWS services:
 
