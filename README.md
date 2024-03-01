@@ -25,7 +25,7 @@ Before deploying RVM, ensure you meet the following prerequisites:
 ### Step 1: Download or clone the repository
 
 1. Begine by cloning this repository.
-2. Remove remote refrences from your cloned repository.
+2. Remove remote references from your cloned repository.
 3. Follow the guide [here](https://docs.github.com/en/get-started/getting-started-with-git/managing-remote-repositories#adding-a-remote-repository) to add your repository as a remote repository.
 4. Follow the guide [here](https://docs.github.com/en/get-started/using-git/pushing-commits-to-a-remote-repository) to push the files to your organization repository.
 
