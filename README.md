@@ -17,7 +17,7 @@ Before deploying RVM, ensure you meet the following prerequisites:
 - A GitHub Organization (GitHub Enterprise/Premium/Ultimate are not required.)
 - A multi-account AWS environment (does not need to be part of AWS Organizations)
 - A mechanism for deploying an IAM role used by Role Vending Machine in all AWS accounts (e.g., AFT, StackSets)
-- Terraform (v1.3+) 
+- Terraform (v1.3+)
 - AWS Terraform Provider (v4+)
 
 ## Getting started
@@ -290,7 +290,7 @@ To start, create a feature branch in your local environment. Next, create a Terr
 
 </br>After creating the module block and specifying all the required variables, create a Terraform `aws_iam_policy_document` data block and include the permissions for your role. Following is an example of a Terraform manifest you can create for a GitHub pipeline role.
 
-```json
+```hcl
 module "example_security_inf_repo_Production" {
   source                   = "../github-workflow-roles"
   github_organization_name = var.default_github_organization_name
