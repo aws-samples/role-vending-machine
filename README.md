@@ -1,8 +1,9 @@
 # Role Vending Machine
 
-Role Vending Machine (RVM) solution enables developers to get the right role permissions and trust policy, while reducing the undifferentiated heavy lifting of trust policy management and role creation. Security teams can audit (or require review on) the RVM repository to ensure that best practices for IAM roles are being met. The central nature of RVM also allows for the security team to include automated code scanning into the pipeline and enforce standards (ranging from naming conventions to permission boundaries).
+Role Vending Machine (RVM) solution enables developers to get the right role permissions and trust policy, while reducing the undifferentiated heavy lifting of trust policy management and role creation. Security teams can audit (or require review on) the RVM repository to ensure that best practices for IAM roles are being met. The central nature of RVM also allows for the security team to include automated code scanning into the pipeline and enforce standards (ranging from naming conventions to permission boundaries). Out of the box, RVM offers [checkov](https://github.com/bridgecrewio/checkov) scanning for Terraform templates, and [IAM Access Analyzer policy validation](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-validation.html) using [IAM Policy Validator for Terraform
+](https://github.com/awslabs/terraform-iam-policy-validator).
 
-RVM uses GitHub Actions to automate the role creation and deployment process. RVM allows developers to create roles for three different types of principals: GitHub pipelines, EKS pods, and other AWS services. Developers will commit Terraform files outlining required permissions and other essential details for their workload to RVM repository. When they create a pull request, a GitHub workflow initiates a Terraform plan to summarize the deployment changes and adds this information to the pull request. Following a review and approval, and after merging the pull request, another workflow executes the Terraform apply command to deploy the proposed role in the target AWS account.
+RVM uses GitHub Actions to automate the role creation and deployment process. RVM allows developers to create roles for three different types of principals: GitHub pipelines, EKS pods, and other AWS services. Developers will commit Terraform files outlining required permissions and other essential details for their workload to RVM repository. When they create a pull request, a GitHub workflow initiates a Terraform plan to summarize the deployment changes, scans the Terraform template using Checkov, validates the submitted IAM policies against [IAM Access Analyzer policy check reference](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-reference-policy-checks.html), and adds this information to the pull request. Following a review and approval, and after merging the pull request, another workflow executes the Terraform apply command to deploy the proposed role in the target AWS account.
 
 ![RVM Workflow](assets/rvm-workflow.png)
 
@@ -69,7 +70,7 @@ Replace the `<YOUR RVM Account ID>` in the policy above with RVM's account ID.
 
 Provide necessary information to prepare the repository for bootstrapping. Below is a list of files you need to modify:
 
-1. `.github/workflows/.env`: provide RVM account ID, AWS region, and your GitHub organization name. All other fields are optional to update.
+1. `.github/workflows/.env`: provide RVM account ID, AWS region, your GitHub organization name, and the level of IAM Access Analyzer finding that will break the pipeline. All other fields are optional to update.
 2. `scripts/generate_providers_and_account_vars.py`: provide the main AWS region you operate in[^1].
 3. Navigate to `bootstrap` folder under scripts folder.
    1. Update `terraform.tfvars` file with your GitHub organization name and the default AWS region where RVM resources are deployed into.
