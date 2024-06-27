@@ -56,7 +56,7 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: ${{ steps.dotenv.outputs.TERRAFORM_VERSION }}
-          terraform_wrapper: false
+          terraform_wrapper: false  # This ensures that TF output complies with JSON
 
       # - name: Get GitHub Apps Token # This enables access to Terraform modules in internal/private repos
       #   id: get_token
