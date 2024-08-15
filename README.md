@@ -32,20 +32,20 @@ Before deploying RVM, ensure you meet the following prerequisites:
 
 ### Step 2: Allow the Organization’s pipeline to create pull requests (PR)
 
-This step is only necessary if you want to allow the *Generate Providers and Account Variables* workflow to create PRs. This workflow updates the Terraform providers file to include new AWS Organization’ account. View [Managing GitHub Actions settings for a repository](https://docs.github.com/en/enterprise-server@3.10/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#preventing-github-actions-from-creating-or-approving-pull-requests) to learn how to allow or  GitHub Actions workflows to creating pull requests.
+This step is only necessary if you want to allow the *Generate Providers and Account Variables* workflow to create PRs. This workflow updates the Terraform providers file to include new AWS Organization’ account. View [Managing GitHub Actions settings for a repository](https://docs.github.com/en/enterprise-server@3.10/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#preventing-github-actions-from-creating-or-approving-pull-requests) to learn how to allow or GitHub Actions workflows to creating pull requests.
 
-*Note*: you can create the provider's manually, and skip this step.
+*Note*: you can create the providers manually, and skip this step.
 
 ### Step 3: Designate an AWS account for Role Vending machine and delegate required permissions
 
-Select or create an account in your AWS Organization to deploy RVM resources. If you plan to use *Generate Providers and Account Variables* workflow, you need to provide the RVM account with necessary permissions to list your organization's accounts. View [Delegated administrator for AWS Organizations](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_delegate_policies.html) for more information. Below is an example of the permissions required for the workflow to run properly:
+Select or create an account in your AWS Organization to deploy RVM resources (for example, an `IamAdmin` account). If you plan to use *Generate Providers and Account Variables* workflow, you need to provide the RVM account with necessary permissions to list your organization's accounts. View [Delegated administrator for AWS Organizations](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_delegate_policies.html) for more information. Below is an example of the permissions required for the workflow to run properly:
 
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "Statement",
+      "Sid": "AllowRvmRead",
       "Effect": "Allow",
       "Principal": {
         "AWS": "arn:aws:iam::<YOUR RVM Account ID>:root"
@@ -76,7 +76,7 @@ Provide necessary information to prepare the repository for bootstrapping. Below
    1. Update `terraform.tfvars` file with your GitHub organization name and the default AWS region where RVM resources are deployed into.
    2. Optionally, review the variables in `variables.tf` file and set your desired values in `terraform.tfvars` file. For example, if you want to deploy Terraform backend resources deployed in the RVM account, set the value of `create_tf_state_management_infrastructure` variable to `true`. If you want to use a repo name other than "role-vending-machine", you can set that in `terraform.tfvars` as well.
 
-[^1]: IAM resources are global, the Region you specify in `generate_providers_and_account_vars.py` is used to create the AWS providers in each account, this can later be used with Terraform data structures to dynamically reference the Region in your policies.
+[^1]: IAM resources are global, of course; the Region you specify in `generate_providers_and_account_vars.py` is used to create the AWS providers in each account, this can later be used with Terraform data structures to dynamically reference the Region in your policies.
 
 ### Step 5: Bootstrap the RVM repository
 
@@ -94,7 +94,7 @@ Figure below, shows the RVM bootstrapping process.
 
 ![RVM bootstrapping process](assets/boostrap.png)
 
-1. Make sure you have local credentials set up to access RVM account.
+1. Make sure you have local credentials set up to access the RVM account.
 2. From terminal, navigate to `scripts/bootstrap` folder
    1. In the context of your RVM account, run `terraform init` to initiate Terraform.
    2. Run `terraform apply`, review the changes and approve to deploy RVM resources to RVM account. This will deploy IAM Main Role, and optionally Terraform backend resources.
