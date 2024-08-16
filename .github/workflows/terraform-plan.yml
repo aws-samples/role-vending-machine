@@ -38,7 +38,7 @@ jobs:
           path: ".github/workflows/.env"
 
       - name: Set Environment Variables
-        uses: c-py/action-dotenv-to-setenv@v4
+        uses: c-py/action-dotenv-to-setenv@v5
         with:
           env-file: ".github/workflows/.env"
 
@@ -53,7 +53,7 @@ jobs:
           aws-region: ${{ steps.dotenv.outputs.aws_region }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ steps.dotenv.outputs.TERRAFORM_VERSION }}
           terraform_wrapper: false  # This ensures that TF output complies with JSON
@@ -128,7 +128,7 @@ jobs:
           echo "${PLAN:0:65536}" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@v7
         # env:
         #   ORIG_PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
         with:

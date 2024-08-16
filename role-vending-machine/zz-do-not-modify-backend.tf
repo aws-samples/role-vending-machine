@@ -4,8 +4,7 @@ terraform {
     encrypt        = "true"
     bucket         = "111111111111-tf-remote-state"
     dynamodb_table = "tf-state-lock"
-    key            = "git://github.com/mygithuborg/role-vending-machine.git"
-    region         = "us-east-2"
-    profile        = "111111111111"
+    key            = "github.com/<my_github_org>/role-vending-machine.git"
+    region         = "us-east-1"
   }
 }
