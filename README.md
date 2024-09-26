@@ -346,7 +346,7 @@ To start, create a feature branch in your local environment. Next, create a Terr
 | breakglass_user_email | Email of the user requesting break glass access. |
 
 > [!NOTE]
-> For break glass role types, you need to include an output block in your configuration file. The structure of this output block is shown in the [example-breakglass-role.tf](examples/example-breakglass-role.tf) file. The output value needs to include the following keys: principal, requester, role_arn, and email. Importantly, you do not need to hardcode the values for these keys. Instead, you should ensure that the module referenced in these output values has the same name as the module in your configuration file. For example, if the name of your module is `example-break-glass`, then the values in the output block should start with module.`example-break-glass.`, referencing the outputs of that specific module.
+> For break glass role types, you need to include an output block in your configuration file. The structure of this output block is shown in the [example-breakglass-role.tf](examples/example-breakglass-role.tf) file. The output value needs to include the following keys: principal, requester, role_arn, and email. Importantly, you do not need to hardcode the values for these keys. Instead, you should ensure that the module referenced in these output values has the same name as the module in your configuration file. For example, if the name of your module is `example-break-glass`, then the values in the output block should start with module.`example-break-glass.`, referencing the outputs of that specific module. Additionally, the name of the `output` should start with `breakglass_`.
 
 </details>
 
