@@ -116,6 +116,62 @@ jobs:
         run: terraform apply -input=false -no-color terraform.tfplan
         continue-on-error: true
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip" # caching pip dependencies
+      - run: pip install -r $GITHUB_WORKSPACE/scripts/requirements.txt
+
+      - name: Terraform Outputs
+        id: extract_outputs
+        if: steps.apply.outcome == 'success'
+        run: |
+          terraform output -json > outputs.json
+          # Extract all breakglass_<name> outputs dynamically and set them in GITHUB_ENV
+          jq -r 'to_entries[] | select(.key | startswith("breakglass_")) | "\(.key)"' outputs.json > breakglass_keys.txt
+          # Loop through each breakglass_<name> output and set environment variables
+          while IFS= read -r key; do
+            principal=$(jq -r ".${key}.value.principal" outputs.json)
+            role_arn=$(jq -r ".${key}.value.role_arn" outputs.json)
+            requester=$(jq -r ".${key}.value.requester" outputs.json)
+            email=$(jq -r ".${key}.value.email" outputs.json)
+            # Save the values in GITHUB_ENV for use in subsequent steps
+            echo "${key}_principal=$principal" >> $GITHUB_ENV
+            echo "${key}_role_arn=$role_arn" >> $GITHUB_ENV
+            echo "${key}_requester=$requester" >> $GITHUB_ENV
+            echo "${key}_email=$email" >> $GITHUB_ENV
+          done < breakglass_keys.txt
+
+      - name: Configuring AWS Credentials w/ Break Glass Role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          unset-current-credentials: true
+          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.aws_account_id }}:role/${{ steps.dotenv.outputs.aws_breakglass_role }}
+          role-session-name: ${{ github.actor }}_${{ github.job }}
+          aws-region: ${{ steps.dotenv.outputs.aws_region }}
+
+      - name: Generate Break Glass URLs
+        if: steps.extract_outputs.outcome == 'success'
+        run: |
+          # Loop through each breakglass_<name> from the previous step
+          while IFS= read -r key; do
+            # Access environment variables directly
+            principal=$(eval echo "\${${key}_principal}")
+            role_arn=$(eval echo "\${${key}_role_arn}")
+            requester=$(eval echo "\${${key}_requester}")
+            email=$(eval echo "\${${key}_email}")
+            # Check if principal is 'breakglass' and run the script
+            if [ "$principal" == "breakglass" ]; then
+              echo "Running breakglass script for $key"
+              python3 $GITHUB_WORKSPACE/scripts/break_glass.py \
+                --role-arn "$role_arn" \
+                --requester "$requester" \
+                --email "$email"
+            else
+              echo "Skipping $key since principal is not 'breakglass'"
+            fi
+          done < breakglass_keys.txt
+
       - name: Post Apply Success to GitHub PR
         if: steps.apply.outcome == 'success'
         uses: mshick/add-pr-comment@v2

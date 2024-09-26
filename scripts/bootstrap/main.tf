@@ -60,3 +60,30 @@ resource "aws_iam_role_policy" "workflow_role_management" {
   role   = module.workflow_role.iam_role_name
   policy = local.rvm_assumption_policy
 }
+
+### IAM Role with OIDC trust for creating break glass role ###
+module "breakglass_role" {
+  #checkov:skip=CKV_TF_1:cannot provide commit hash for TF repository
+  source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+  version                        = "5.30.0"
+  create_role                    = true
+  role_name                      = var.breakglass_role_name
+  provider_url                   = "https://token.actions.githubusercontent.com"
+  oidc_fully_qualified_audiences = ["sts.amazonaws.com"]
+  oidc_fully_qualified_subjects = [
+    "repo:${var.github_organization}/${var.github_repo}:ref:refs/heads/${local.protected_branch_name}",
+    # Optional: GitHub environments can also be used to delegate trust, beyond just branch names
+    # "repo:${var.github_organization}/${var.github_repo}:environment:${var.github_environment}"
+  ]
+}
+
+resource "aws_iam_role_policy" "breakglass_role_assumption" {
+  name   = "github-breakglass-role-access"
+  role   = module.breakglass_role.iam_role_name
+  policy = local.rvm_breakglass_assumption_policy
+}
+resource "aws_iam_role_policy" "breakglass_ses_access" {
+  name   = "ses-send-email"
+  role   = module.breakglass_role.iam_role_name
+  policy = local.rvm_breakglass_ses_policy
+}
