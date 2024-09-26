@@ -23,17 +23,6 @@ module "example-break-glass-PRD" {
   role_name = "test-break-glass-role"
 }
 
-# Output block's name need to start with "breakglass_" otherwise access won't be provisioned
-# Change the module name in the output to the module you define above
-output "breakglass_Production" {
-  value = {
-    "principal" = module.example-break-glass-PRD.principal_type,
-    "requester" = module.example-break-glass-PRD.breakglass_user_alias,
-    "role_arn"  = module.example-break-glass-PRD.iam_role_arn
-    "email"     = module.example-break-glass-PRD.breakglass_user_email
-  }
-}
-
 data "aws_iam_policy_document" "example-pod-identity_Production_permissions" {
   # Specify the permissions that your workflow role needs using this resource
   statement {

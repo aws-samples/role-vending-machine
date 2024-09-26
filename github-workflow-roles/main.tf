@@ -22,6 +22,7 @@ locals {
     ["repo:${local.github_organization_name}/${var.repository_name}:pull_request"]
   ) : null
 
+
   managed_policies          = concat(var.managed_policies, ["arn:aws:iam::aws:policy/ReadOnlyAccess"])
   managed_policies_readonly = ["arn:aws:iam::aws:policy/ReadOnlyAccess"]
 
@@ -43,6 +44,14 @@ locals {
     include_org_condition     = true
   }
 
+  path = var.principal_type == "breakglass" ? "/breakglass/" : "/RVM/"
+  tags ={
+    principal_type = var.principal_type
+    role_arn = "arn:aws:iam::${local.aws_account_id}:role${local.path}${local.role_name}"
+    create_date = timestamp()
+    requester = var.principal_type == "breakglass" ? var.breakglass_user_alias : null
+    email = var.principal_type == "breakglass" ? var.breakglass_user_email : null
+  }
 }
 
 
@@ -53,7 +62,7 @@ locals {
 resource "aws_iam_role" "main" {
   name                 = local.role_name
   description          = local.role_description
-  path                 = var.principal_type == "breakglass" ? "/breakglass/" : "/RVM/"
+  path                 = local.path
   max_session_duration = var.max_session_duration
 
   force_detach_policies = var.force_detach_policies
@@ -61,7 +70,11 @@ resource "aws_iam_role" "main" {
 
   assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
 
-  tags = var.tags
+  tags = merge(var.tags, local.tags)
+  
+  lifecycle {
+    ignore_changes = [tags["create_date"]]
+  }
 }
 
 data "aws_iam_policy_document" "assume_role_policy" {

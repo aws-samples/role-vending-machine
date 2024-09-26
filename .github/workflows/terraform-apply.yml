@@ -122,25 +122,33 @@ jobs:
           cache: "pip" # caching pip dependencies
       - run: pip install -r $GITHUB_WORKSPACE/scripts/requirements.txt
 
-      - name: Terraform Outputs
-        id: extract_outputs
-        if: steps.apply.outcome == 'success'
+      - name: Export Terraform State to JSON
+        id: read_state
+        run: terraform show -json > state.json
+
+      - name: Extract Breakglass Roles
+        id: extract_roles
         run: |
-          terraform output -json > outputs.json
-          # Extract all breakglass_<name> outputs dynamically and set them in GITHUB_ENV
-          jq -r 'to_entries[] | select(.key | startswith("breakglass_")) | "\(.key)"' outputs.json > breakglass_keys.txt
-          # Loop through each breakglass_<name> output and set environment variables
-          while IFS= read -r key; do
-            principal=$(jq -r ".${key}.value.principal" outputs.json)
-            role_arn=$(jq -r ".${key}.value.role_arn" outputs.json)
-            requester=$(jq -r ".${key}.value.requester" outputs.json)
-            email=$(jq -r ".${key}.value.email" outputs.json)
-            # Save the values in GITHUB_ENV for use in subsequent steps
-            echo "${key}_principal=$principal" >> $GITHUB_ENV
-            echo "${key}_role_arn=$role_arn" >> $GITHUB_ENV
-            echo "${key}_requester=$requester" >> $GITHUB_ENV
-            echo "${key}_email=$email" >> $GITHUB_ENV
-          done < breakglass_keys.txt
+          # Get current timestamp in seconds
+          current_timestamp=$(date +%s)
+          # Filter roles with principal_type="breakglass" and created within the last 3 minutes
+          jq -r '[
+            .values.root_module.child_modules[].resources[]
+            | select(.type == "aws_iam_role")
+            | select(.values.tags.principal_type == "breakglass")
+            | select(.values.tags.create_date != null)
+            | .values as $values
+            | .values.tags.create_date as $create_date
+            | (now - ($create_date | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime)) as $age
+            | select($age <= 180)  # 3 minutes = 180 seconds
+            | {
+                role_arn: $values.tags["role_arn"],
+                requester: $values.tags.requester,
+                email: $values.tags.email
+              }
+          ]' state.json > breakglass_roles.json
+          num_roles=$(jq length breakglass_roles.json)
+          echo "Found $num_roles roles to process"
 
       - name: Configuring AWS Credentials w/ Break Glass Role
         uses: aws-actions/configure-aws-credentials@v4
@@ -151,26 +159,19 @@ jobs:
           aws-region: ${{ steps.dotenv.outputs.aws_region }}
 
       - name: Generate Break Glass URLs
-        if: steps.extract_outputs.outcome == 'success'
+        if: steps.extract_roles.outcome == 'success'
         run: |
-          # Loop through each breakglass_<name> from the previous step
-          while IFS= read -r key; do
-            # Access environment variables directly
-            principal=$(eval echo "\${${key}_principal}")
-            role_arn=$(eval echo "\${${key}_role_arn}")
-            requester=$(eval echo "\${${key}_requester}")
-            email=$(eval echo "\${${key}_email}")
-            # Check if principal is 'breakglass' and run the script
-            if [ "$principal" == "breakglass" ]; then
-              echo "Running breakglass script for $key"
-              python3 $GITHUB_WORKSPACE/scripts/break_glass.py \
-                --role-arn "$role_arn" \
-                --requester "$requester" \
-                --email "$email"
-            else
-              echo "Skipping $key since principal is not 'breakglass'"
-            fi
-          done < breakglass_keys.txt
+          # Loop through each breakglass role and process
+          jq -c '.[]' breakglass_roles.json | while IFS= read -r role; do
+            role_arn=$(echo "$role" | jq -r '.role_arn')
+            requester=$(echo "$role" | jq -r '.requester')
+            email=$(echo "$role" | jq -r '.email')
+            echo "Running breakglass script for role: $role_arn"
+            python3 $GITHUB_WORKSPACE/scripts/break_glass.py \
+              --role-arn "$role_arn" \
+              --requester "$requester" \
+              --email "$email"
+          done
 
       - name: Post Apply Success to GitHub PR
         if: steps.apply.outcome == 'success'
