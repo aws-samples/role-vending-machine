@@ -48,7 +48,7 @@ jobs:
       - name: Configure AWS Credentials for reading state
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.aws_account_id }}:role/${{ steps.dotenv.outputs.aws_workflow_role }}-readonly
+          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.TF_VAR_rvm_account_id }}:role/${{ steps.dotenv.outputs.aws_workflow_role }}-readonly
           role-session-name: ${{ github.actor }}_${{ github.job }}
           aws-region: ${{ steps.dotenv.outputs.aws_region }}
 
