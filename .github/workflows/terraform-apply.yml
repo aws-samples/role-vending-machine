@@ -75,7 +75,7 @@ jobs:
         #if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.aws_account_id }}:role/${{ steps.dotenv.outputs.aws_workflow_role }}
+          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.TF_VAR_rvm_account_id }}:role/${{ steps.dotenv.outputs.aws_workflow_role }}
           role-session-name: ${{ github.actor }}_${{ github.job }}
           aws-region: ${{ steps.dotenv.outputs.aws_region }}
 
@@ -126,52 +126,20 @@ jobs:
         id: read_state
         run: terraform show -json > state.json
 
-      - name: Extract Breakglass Roles
-        id: extract_roles
-        run: |
-          # Get current timestamp in seconds
-          current_timestamp=$(date +%s)
-          # Filter roles with principal_type="breakglass" and created within the last 3 minutes
-          jq -r '[
-            .values.root_module.child_modules[].resources[]
-            | select(.type == "aws_iam_role")
-            | select(.values.tags.principal_type == "breakglass")
-            | select(.values.tags.create_date != null)
-            | .values as $values
-            | .values.tags.create_date as $create_date
-            | (now - ($create_date | strptime("%Y-%m-%dT%H:%M:%SZ") | mktime)) as $age
-            | select($age <= 180)  # 3 minutes = 180 seconds
-            | {
-                role_arn: $values.tags["role_arn"],
-                requester: $values.tags.requester,
-                email: $values.tags.email
-              }
-          ]' state.json > breakglass_roles.json
-          num_roles=$(jq length breakglass_roles.json)
-          echo "Found $num_roles roles to process"
-
+      # The member accounts' Breakglass roles are configured to trust the RVM breakglass role, NOT the "main" RVM role. Thus, we change creds.
+      # "But why not just assume the new role in the Python script...?" That's role-chaining, and that has limitations! It's also harder to debug.
       - name: Configuring AWS Credentials w/ Break Glass Role
         uses: aws-actions/configure-aws-credentials@v4
         with:
           unset-current-credentials: true
-          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.aws_account_id }}:role/${{ steps.dotenv.outputs.aws_breakglass_role }}
+          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.TF_VAR_rvm_account_id }}:role/${{ steps.dotenv.outputs.aws_breakglass_role }}
           role-session-name: ${{ github.actor }}_${{ github.job }}
           aws-region: ${{ steps.dotenv.outputs.aws_region }}
 
-      - name: Generate Break Glass URLs
-        if: steps.extract_roles.outcome == 'success'
+      - name: Extract Breakglass Roles
+        id: extract_roles
         run: |
-          # Loop through each breakglass role and process
-          jq -c '.[]' breakglass_roles.json | while IFS= read -r role; do
-            role_arn=$(echo "$role" | jq -r '.role_arn')
-            requester=$(echo "$role" | jq -r '.requester')
-            email=$(echo "$role" | jq -r '.email')
-            echo "Running breakglass script for role: $role_arn"
-            python3 $GITHUB_WORKSPACE/scripts/break_glass.py \
-              --role-arn "$role_arn" \
-              --requester "$requester" \
-              --email "$email"
-          done
+          python3 $GITHUB_WORKSPACE/scripts/generate_break_glass_urls.py --tf-state-path state.json
 
       - name: Post Apply Success to GitHub PR
         if: steps.apply.outcome == 'success'
@@ -198,26 +166,6 @@ jobs:
             ```
             ${{ steps.apply.outputs.stderr }}
             ```
-
-      # - name: Notify Mirosoft Teams On Success
-      #   if: steps.apply.outcome == 'success'
-      #   uses: jdcargile/ms-teams-notification@v1.3
-      #   with:
-      #     github-token: ${{ github.token }} # this will use the runner's token.
-      #     ms-teams-webhook-uri: ${{ secrets.TEAMS_WEBHOOK }}
-      #     notification-summary: Terraform Apply Succeeded
-      #     notification-color: 34eb5c #Green
-      #     #timezone: America/Denver
-
-      # - name: Notify Mirosoft Teams On Failure
-      #   if: steps.apply.outcome == 'failure'
-      #   uses: jdcargile/ms-teams-notification@v1.3
-      #   with:
-      #     github-token: ${{ github.token }} # this will use the runner's token.
-      #     ms-teams-webhook-uri: ${{ secrets.TEAMS_WEBHOOK }}
-      #     notification-summary: Terraform Apply Failed
-      #     notification-color: eb4034 #Red
-      #     #timezone: America/Denver
 
       - name: Terraform Apply Status
         if: steps.apply.outcome == 'failure'

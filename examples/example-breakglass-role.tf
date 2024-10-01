@@ -61,6 +61,6 @@ data "aws_iam_policy_document" "example-pod-identity_Production_permissions" {
       "sqs:SetQueueAttributes"
     ]
     # Instead of hard-coding account numbers, reference the variable names stored in the `variables-accounts` manifest
-    resources = ["arn:aws:sqs:*:${account_Production}:aws-s3-access-logs"]
+    resources = ["arn:aws:sqs:*:${var.account_Production}:aws-s3-access-logs"]
   }
 }
