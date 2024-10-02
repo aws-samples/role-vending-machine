@@ -166,7 +166,27 @@ jobs:
             ```
             ${{ steps.apply.outputs.stderr }}
             ```
+      
+      # - name: Notify Mirosoft Teams On Success
+      #   if: steps.apply.outcome == 'success'
+      #   uses: jdcargile/ms-teams-notification@v1.3
+      #   with:
+      #     github-token: ${{ github.token }} # this will use the runner's token.
+      #     ms-teams-webhook-uri: ${{ secrets.TEAMS_WEBHOOK }}
+      #     notification-summary: Terraform Apply Succeeded
+      #     notification-color: 34eb5c #Green
+      #     #timezone: America/Denver
 
+      # - name: Notify Mirosoft Teams On Failure
+      #   if: steps.apply.outcome == 'failure'
+      #   uses: jdcargile/ms-teams-notification@v1.3
+      #   with:
+      #     github-token: ${{ github.token }} # this will use the runner's token.
+      #     ms-teams-webhook-uri: ${{ secrets.TEAMS_WEBHOOK }}
+      #     notification-summary: Terraform Apply Failed
+      #     notification-color: eb4034 #Red
+      #     #timezone: America/Denver
+      
       - name: Terraform Apply Status
         if: steps.apply.outcome == 'failure'
         run: exit 1
