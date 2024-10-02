@@ -23,7 +23,7 @@ locals {
   ) : null
 
 
-  managed_policies          = concat(var.managed_policies, ["arn:aws:iam::aws:policy/ReadOnlyAccess"])
+  managed_policies          = var.principal_type == "github" ? concat(var.managed_policies, ["arn:aws:iam::aws:policy/ReadOnlyAccess"]) : var.managed_policies
   managed_policies_readonly = ["arn:aws:iam::aws:policy/ReadOnlyAccess"]
 
   pod_trust_policy_controls = {
@@ -179,6 +179,7 @@ resource "aws_iam_role_policy_attachment" "custom" {
 }
 
 resource "aws_iam_role_policy" "workflow_role_state_access" {
+  count = var.principal_type == "github" ? 1 : 0
   name = "tf-remote-state-access"
   role = aws_iam_role.main.name
   policy = jsonencode({
