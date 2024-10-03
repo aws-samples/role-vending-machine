@@ -61,7 +61,10 @@ def extract_break_glass_roles(
     return breakglass_roles
 
 
-def generate_break_glass_urls(input_roles: list[dict]):
+def generate_break_glass_urls(
+    input_roles: list[dict],
+    sender_email,
+):
     """
     Takes a JSON file of breakglass roles and generates a breakglass URL for each role.
     Output: Prints a breakglass URL for each role
@@ -69,17 +72,19 @@ def generate_break_glass_urls(input_roles: list[dict]):
     for role in input_roles:
         role_arn = role.get("arn")
         requester = role.get("tags", {}).get("requester")
-        email = role.get("tags", {}).get("email")
+        recipient_email = role.get("tags", {}).get("email")
         print(f"Running breakglass script for role: {role_arn}")
         url_generator_wrapper(
             role_arn=role_arn,
             requester=requester,
-            email=email,
+            recipient_email=recipient_email,
+            sender_email=sender_email,
         )
 
 
 def send_email(
-    email,
+    sender_email,
+    recipient_email,
     recipient,
     url,
     default_session,
@@ -88,9 +93,6 @@ def send_email(
     """
     Sends the email containing the login URL
     """
-
-    SENDER = email  # Replace with your verified email address
-    RECIPIENT = email  # Replace with the recipient email address
     SUBJECT = "Sensitive: Break Glass access"
     BODY_TEXT = (
         f"This email was sent by RVM per {recipient} request for break glass access."
@@ -120,7 +122,7 @@ def send_email(
     try:
         # Provide the contents of the email.
         response = ses_client.send_email(
-            Destination={"ToAddresses": [RECIPIENT]},
+            Destination={"ToAddresses": [recipient_email]},
             Message={
                 "Body": {
                     "Html": {"Charset": CHARSET, "Data": BODY_HTML},
@@ -128,7 +130,7 @@ def send_email(
                 },
                 "Subject": {"Charset": CHARSET, "Data": SUBJECT},
             },
-            Source=SENDER,
+            Source=sender_email,
         )
     except ClientError as e:
         print(f"Error: {e.response['Error']['Message']}")
@@ -181,7 +183,12 @@ def url_generator(arn, session_name, sts_connection):
     return request_url
 
 
-def url_generator_wrapper(role_arn, requester, email):
+def url_generator_wrapper(
+    role_arn,
+    requester,
+    recipient_email,
+    sender_email,
+):
     # Default session and config
     boto3_config = Config(retries={"mode": "standard", "max_attempts": 10})
     default_session = (
@@ -197,7 +204,8 @@ def url_generator_wrapper(role_arn, requester, email):
             sts_connection=sts_connection,
         )
         send_email(
-            email=email,
+            sender_email=sender_email,
+            recipient_email=recipient_email,
             recipient=requester,
             url=console_url,
             default_session=default_session,
@@ -205,7 +213,7 @@ def url_generator_wrapper(role_arn, requester, email):
         )
     except Exception as e:
         # Add more context to the exception
-        error_msg = f"An exception occurred while generating the console URL. Role ARN: {role_arn}, Requester: {requester}, Email: {email}"
+        error_msg = f"An exception occurred while generating the console URL. Role ARN: {role_arn}, Requester: {requester}, Recipient Email: {recipient_email}"
         e.args = (error_msg,) + e.args
         raise
 
@@ -219,6 +227,21 @@ if __name__ == "__main__":
         default="./state.json",
         help="Path to the Terraform state file.",
     )
+    parser.add_argument(
+        "--sender-email",
+        required=True,
+        help="Email address of the sender.",
+    )
+    parser.add_argument(
+        "--read-only-mode",
+        action="store_true",
+        help="If set, the script will only print the URLs and not send emails.",
+    )
     args = parser.parse_args()
     extracted_roles = extract_break_glass_roles(tf_state_path=args.tf_state_path)
-    generate_break_glass_urls(input_roles=extracted_roles)
+    if not args.read_only_mode:
+        generate_break_glass_urls(
+            input_roles=extracted_roles, sender_email=args.sender_email
+        )
+    else:
+        logging.warning("Skipping breakglass URL generation due to read-only mode.")

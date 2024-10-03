@@ -139,7 +139,7 @@ jobs:
       - name: Extract Breakglass Roles
         id: extract_roles
         run: |
-          python3 $GITHUB_WORKSPACE/scripts/generate_break_glass_urls.py --tf-state-path state.json
+          python3 $GITHUB_WORKSPACE/scripts/generate_break_glass_urls.py --tf-state-path state.json --sender-email ${{ steps.dotenv.outputs.breakglass_sender_email }}
 
       - name: Post Apply Success to GitHub PR
         if: steps.apply.outcome == 'success'

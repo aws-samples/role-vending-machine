@@ -103,6 +103,11 @@ variable "github_organization_name" {
   description = "Name of the GitHub Organization - Required if 'principal_type' is 'github'"
   type        = string
   default     = null
+  # Note: cross-variable validation conditions are only supported in Terraform v1.9+. Comment out this validation block if you are on an older version of TF.
+  validation {
+    condition     = var.github_organization_name == null || (var.github_organization_name != null && (var.principal_type == "github" || var.principal_type == "breakglass"))
+    error_message = "The github_organization_name variable is required when the principal_type is 'github' or 'breakglass'."
+  }
 }
 
 

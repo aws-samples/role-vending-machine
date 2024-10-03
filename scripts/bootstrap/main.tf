@@ -64,6 +64,7 @@ resource "aws_iam_role_policy" "workflow_role_management" {
 ### IAM Role with OIDC trust for creating break glass role ###
 module "breakglass_role" {
   #checkov:skip=CKV_TF_1:cannot provide commit hash for TF repository
+  count = var.enable_breakglass_provisioning ? 1 : 0
   source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
   version                        = "5.30.0"
   create_role                    = true
@@ -78,12 +79,14 @@ module "breakglass_role" {
 }
 
 resource "aws_iam_role_policy" "breakglass_role_assumption" {
+  count = var.enable_breakglass_provisioning ? 1 : 0
   name   = "github-breakglass-role-access"
-  role   = module.breakglass_role.iam_role_name
+  role   = module.breakglass_role[0].iam_role_name
   policy = local.rvm_breakglass_assumption_policy
 }
 resource "aws_iam_role_policy" "breakglass_ses_access" {
+  count = var.enable_breakglass_provisioning ? 1 : 0
   name   = "ses-send-email"
-  role   = module.breakglass_role.iam_role_name
+  role   = module.breakglass_role[0].iam_role_name
   policy = local.rvm_breakglass_ses_policy
 }

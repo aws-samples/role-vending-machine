@@ -17,7 +17,7 @@ module "example-break-glass-PRD" {
   principal_type = "breakglass"
 
   breakglass_user_alias = "johndoe"
-  breakglass_user_email = "jdoe@my-organization.com"
+  breakglass_user_email = "jdoe@test.lab"
 
 
   role_name = "test-break-glass-role"
