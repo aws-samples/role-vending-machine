@@ -129,6 +129,8 @@ jobs:
       # The member accounts' Breakglass roles are configured to trust the RVM breakglass role, NOT the "main" RVM role. Thus, we change creds.
       # "But why not just assume the new role in the Python script...?" That's role-chaining, and that has limitations! It's also harder to debug.
       - name: Configuring AWS Credentials w/ Break Glass Role
+        if: steps.dotenv.outputs.aws_breakglass_role
+        id: configure-breakglass-credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           unset-current-credentials: true
@@ -137,6 +139,7 @@ jobs:
           aws-region: ${{ steps.dotenv.outputs.aws_region }}
 
       - name: Extract Breakglass Roles
+        if: steps.configure-breakglass-credentials.outcome == 'success'
         id: extract_roles
         run: |
           python3 $GITHUB_WORKSPACE/scripts/generate_break_glass_urls.py --tf-state-path state.json --sender-email ${{ steps.dotenv.outputs.breakglass_sender_email }}
