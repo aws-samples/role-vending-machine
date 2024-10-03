@@ -103,11 +103,31 @@ jobs:
       # GitHUB PR has 65k character limit: https://github.com/robburger/terraform-pr-commenter/issues/6
       #    echo "$PLAN" >> $GITHUB_ENV
       
-      - name: Set up Python
-        if: ${{ steps.plan.outputs.exitcode == '2' }}
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: "3.11"
+          cache: "pip" # caching pip dependencies
+
+      - run: pip install -r $GITHUB_WORKSPACE/scripts/requirements.txt
+
+      - name: Export Terraform State to JSON
+        id: read_state
+        run: terraform show -json > state.json
+
+      # The member accounts' Breakglass roles are configured to trust the RVM breakglass role, NOT the "main" RVM role. Thus, we change creds.
+      # "But why not just assume the new role in the Python script...?" That's role-chaining, and that has limitations! It's also harder to debug.
+      - name: Configuring AWS Credentials w/ Break Glass Role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          unset-current-credentials: true
+          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.TF_VAR_rvm_account_id }}:role/${{ steps.dotenv.outputs.aws_breakglass_role }}-readonly
+          role-session-name: ${{ github.actor }}_${{ github.job }}
+          aws-region: ${{ steps.dotenv.outputs.aws_region }}
+
+      - name: Extract Breakglass Roles
+        id: extract_roles
+        run: |
+          python3 $GITHUB_WORKSPACE/scripts/generate_break_glass_urls.py --read-only-mode --tf-state-path state.json --sender-email ${{ steps.dotenv.outputs.breakglass_sender_email }}
 
       - name: Install IAM Policy Validator for Terraform
         if: ${{ steps.plan.outputs.exitcode == '2' }}
