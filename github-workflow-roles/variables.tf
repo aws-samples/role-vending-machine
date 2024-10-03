@@ -16,6 +16,12 @@ variable "role_name" {
   default     = null
 }
 
+variable "rvm_assume_role_name" {
+  type        = string
+  description = "The name of the trusted RVM role in the target accounts"
+  default     = "github-assume-role-rvm"
+}
+
 variable "repository_name" {
   description = "Github Repository name"
   type        = string
@@ -24,8 +30,8 @@ variable "repository_name" {
 
 variable "role_description" {
   description = "Role description"
-  type = string
-  default = null
+  type        = string
+  default     = null
 }
 
 variable "role_permissions_boundary_arn" {
@@ -38,6 +44,11 @@ variable "max_session_duration" {
   description = "Maximum CLI/API session duration in seconds between 3600 and 43200"
   type        = number
   default     = 3600
+
+  validation {
+    condition     = var.max_session_duration >= 3600 && var.max_session_duration <= 43200
+    error_message = "The max_session_duration must be between 3600 and 43200 seconds (1 hour and 12 hours)."
+  }
 }
 
 variable "managed_policies" {
@@ -65,9 +76,14 @@ variable "inline_policy_readonly" {
 }
 
 variable "principal_type" {
-  description = "Type of principal assuming the role (github, service, pod)"
+  description = "Type of principal assuming the role (github, service, pod, breakglass)"
   type        = string
   default     = "github"
+
+  validation {
+    condition     = contains(["github", "service", "pod", "breakglass"], var.principal_type)
+    error_message = "The principal_type must be one of: github, service, pod, or breakglass."
+  }
 }
 
 # Variables for github principal type
@@ -139,7 +155,7 @@ variable "service_name" {
   type        = list(string)
   default     = []
   validation {
-    condition     = can(regex("^[A-Za-z0-9.-]+\\.amazonaws\\.com$", var.service_name))
+    condition     = length(var.service_name) == 0 || can(regex("^[A-Za-z0-9.-]+\\.amazonaws\\.com$", var.service_name))
     error_message = "The service_name variable must be in the format of *.amazonaws.com and can only contain letters, numbers, hyphens, and dots."
   }
 }
@@ -154,4 +170,29 @@ variable "service_trust_policy_controls" {
     include_account_condition = false
     include_org_condition     = false
   }
+}
+
+# Variables for break glass principal type
+variable "breakglass_user_alias" {
+  description = "Name of the break glass user"
+  type        = string
+  default     = null
+}
+
+variable "breakglass_user_email" {
+  description = "Email of the break glass user"
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.breakglass_user_email == null || can(regex("^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$", var.breakglass_user_email))
+    error_message = "The breakglass_user_email must be a valid email address or left empty."
+  }
+}
+
+variable "rvm_account_id" {
+  description = "Account ID of the RVM account"
+  type        = string
+  default     = ""
+
 }

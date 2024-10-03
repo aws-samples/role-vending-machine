@@ -17,6 +17,35 @@ locals {
       }
     ]
   })
+  rvm_breakglass_assumption_policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "sts:AssumeRole"
+        ],
+        "Resource" : [
+          "arn:aws:iam::*:role/breakglass/*"
+        ]
+      }
+    ]
+  })
+  rvm_breakglass_ses_policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "ses:SendEmail"
+        ],
+        "Resource" : [
+          "arn:aws:ses:*:${local.account_id}:configuration-set/*",
+          "arn:aws:ses:*:${local.account_id}:identity/*"
+        ]
+      }
+    ]
+  })
   rvm_readonly_assumption_policy = jsonencode({
     "Version" : "2012-10-17",
     "Statement" : [

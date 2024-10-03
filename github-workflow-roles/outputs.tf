@@ -37,3 +37,18 @@ output "readonly_iam_role_unique_id" {
   description = "Unique ID of read-only IAM role"
   value       = try(aws_iam_role.readonly[0].unique_id, "")
 }
+
+output "principal_type" {
+  description = "Type of principal assuming the role (github, service, pod, break glass)"
+  value       = var.principal_type
+}
+
+output "breakglass_user_alias" {
+  description = "Alias of the breakglass user"
+  value       = var.breakglass_user_alias
+}
+
+output "breakglass_user_email" {
+  description = "Email of the breakglass user"
+  value       = var.breakglass_user_email
+}

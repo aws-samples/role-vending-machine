@@ -4,8 +4,9 @@
 ################################################################################
 locals {
   aws_account_id = var.aws_account_id != "" ? var.aws_account_id : data.aws_caller_identity.current.account_id
+  rvm_account_id = var.rvm_account_id != "" ? var.rvm_account_id : null
 
-  github_organization_name = var.principal_type == "github" ? var.github_organization_name : null
+  github_organization_name = var.principal_type == "github" || var.principal_type == "breakglass" ? var.github_organization_name : null
 
   role_name        = var.principal_type == "github" ? coalesce(var.role_name, "${var.repository_name}-repo-role") : var.role_name
   role_description = var.principal_type == "github" ? "Github Workflow Role for ${local.github_organization_name}/${var.repository_name}" : coalesce(var.role_description, "IAM role created for by Role Vending Machine")
@@ -21,7 +22,8 @@ locals {
     ["repo:${local.github_organization_name}/${var.repository_name}:pull_request"]
   ) : null
 
-  managed_policies          = concat(var.managed_policies, ["arn:aws:iam::aws:policy/ReadOnlyAccess"])
+
+  managed_policies          = var.principal_type == "github" ? concat(var.managed_policies, ["arn:aws:iam::aws:policy/ReadOnlyAccess"]) : var.managed_policies
   managed_policies_readonly = ["arn:aws:iam::aws:policy/ReadOnlyAccess"]
 
   pod_trust_policy_controls = {
@@ -42,6 +44,14 @@ locals {
     include_org_condition     = true
   }
 
+  path = var.principal_type == "breakglass" ? "/breakglass/" : "/RVM/"
+  tags ={
+    principal_type = var.principal_type
+    role_arn = "arn:aws:iam::${local.aws_account_id}:role${local.path}${local.role_name}"
+    create_date = timestamp()
+    requester = var.principal_type == "breakglass" ? var.breakglass_user_alias : null
+    email = var.principal_type == "breakglass" ? var.breakglass_user_email : null
+  }
 }
 
 
@@ -52,7 +62,7 @@ locals {
 resource "aws_iam_role" "main" {
   name                 = local.role_name
   description          = local.role_description
-  path                 = "/RVM/"
+  path                 = local.path
   max_session_duration = var.max_session_duration
 
   force_detach_policies = var.force_detach_policies
@@ -60,17 +70,22 @@ resource "aws_iam_role" "main" {
 
   assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
 
-  tags = var.tags
+  tags = merge(var.tags, local.tags)
+  
+  lifecycle {
+    ignore_changes = [tags["create_date"]]
+  }
 }
 
 data "aws_iam_policy_document" "assume_role_policy" {
   statement {
     effect  = "Allow"
-    actions = var.principal_type == "pod" ? ["sts:AssumeRole", "sts:TagSession"] : var.principal_type == "service" ? ["sts:AssumeRole"] : ["sts:AssumeRoleWithWebIdentity"]
+    actions = var.principal_type == "pod" ? ["sts:AssumeRole", "sts:TagSession"] : var.principal_type == "service" || var.principal_type == "breakglass" ? ["sts:AssumeRole"] : ["sts:AssumeRoleWithWebIdentity"]
 
     principals {
-      type        = var.principal_type == "github" ? "Federated" : "Service"
-      identifiers = var.principal_type == "github" ? ["arn:aws:iam::${local.aws_account_id}:oidc-provider/token.actions.githubusercontent.com"] : var.principal_type == "pod" ? ["pods.eks.amazonaws.com"] : var.service_name
+      type = var.principal_type == "github" ? "Federated" : var.principal_type == "breakglass" ? "AWS" : "Service"
+
+      identifiers = var.principal_type == "github" ? ["arn:aws:iam::${local.aws_account_id}:oidc-provider/token.actions.githubusercontent.com"] : var.principal_type == "pod" ? ["pods.eks.amazonaws.com"] : var.principal_type == "breakglass" ? ["arn:aws:iam::${local.rvm_account_id}:role/github-breakglass-rvm"] : var.service_name
     }
 
     dynamic "condition" {
@@ -164,6 +179,7 @@ resource "aws_iam_role_policy_attachment" "custom" {
 }
 
 resource "aws_iam_role_policy" "workflow_role_state_access" {
+  count = var.principal_type == "github" ? 1 : 0
   name = "tf-remote-state-access"
   role = aws_iam_role.main.name
   policy = jsonencode({

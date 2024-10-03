@@ -20,6 +20,12 @@ variable "iam_role_name" {
   default     = "github-workflow-rvm"
 }
 
+variable "breakglass_role_name" {
+  type        = string
+  description = "Name of the role in RVM account that allows the RVM to assume"
+  default     = "github-breakglass-rvm"
+}
+
 variable "iam_assuming_role_name" {
   type        = string
   description = "Name of the IAM Role in each member account that RVM's main role can assume."

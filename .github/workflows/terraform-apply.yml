@@ -75,7 +75,7 @@ jobs:
         #if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.aws_account_id }}:role/${{ steps.dotenv.outputs.aws_workflow_role }}
+          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.TF_VAR_rvm_account_id }}:role/${{ steps.dotenv.outputs.aws_workflow_role }}
           role-session-name: ${{ github.actor }}_${{ github.job }}
           aws-region: ${{ steps.dotenv.outputs.aws_region }}
 
@@ -116,6 +116,31 @@ jobs:
         run: terraform apply -input=false -no-color terraform.tfplan
         continue-on-error: true
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip" # caching pip dependencies
+      - run: pip install -r $GITHUB_WORKSPACE/scripts/requirements.txt
+
+      - name: Export Terraform State to JSON
+        id: read_state
+        run: terraform show -json > state.json
+
+      # The member accounts' Breakglass roles are configured to trust the RVM breakglass role, NOT the "main" RVM role. Thus, we change creds.
+      # "But why not just assume the new role in the Python script...?" That's role-chaining, and that has limitations! It's also harder to debug.
+      - name: Configuring AWS Credentials w/ Break Glass Role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          unset-current-credentials: true
+          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.TF_VAR_rvm_account_id }}:role/${{ steps.dotenv.outputs.aws_breakglass_role }}
+          role-session-name: ${{ github.actor }}_${{ github.job }}
+          aws-region: ${{ steps.dotenv.outputs.aws_region }}
+
+      - name: Extract Breakglass Roles
+        id: extract_roles
+        run: |
+          python3 $GITHUB_WORKSPACE/scripts/generate_break_glass_urls.py --tf-state-path state.json
+
       - name: Post Apply Success to GitHub PR
         if: steps.apply.outcome == 'success'
         uses: mshick/add-pr-comment@v2
@@ -141,7 +166,7 @@ jobs:
             ```
             ${{ steps.apply.outputs.stderr }}
             ```
-
+      
       # - name: Notify Mirosoft Teams On Success
       #   if: steps.apply.outcome == 'success'
       #   uses: jdcargile/ms-teams-notification@v1.3
@@ -161,7 +186,7 @@ jobs:
       #     notification-summary: Terraform Apply Failed
       #     notification-color: eb4034 #Red
       #     #timezone: America/Denver
-
+      
       - name: Terraform Apply Status
         if: steps.apply.outcome == 'failure'
         run: exit 1
