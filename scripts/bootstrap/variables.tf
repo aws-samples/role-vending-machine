@@ -20,6 +20,12 @@ variable "iam_role_name" {
   default     = "github-workflow-rvm"
 }
 
+variable "enable_breakglass_provisioning" {
+  type        = bool
+  description = "Set to true to enable the breakglass provisioning"
+  default     = false
+}
+
 variable "breakglass_role_name" {
   type        = string
   description = "Name of the role in RVM account that allows the RVM to assume"
