@@ -93,6 +93,7 @@ resource "aws_iam_role_policy" "breakglass_ses_access" {
 }
 
 resource "aws_iam_role_policy" "breakglass_role_analyzer" {
+  #checkov:skip=CKV_AWS_355:need ability to analyze all IAM policies
   count  = var.enable_breakglass_provisioning ? 1 : 0
   name   = "github-breakglass-role-analyzer-access"
   role   = module.breakglass_role[0].iam_role_name
@@ -117,6 +118,7 @@ module "breakglass_role_readonly" {
 }
 
 resource "aws_iam_role_policy" "breakglass_role_readonly_analyzer" {
+  #checkov:skip=CKV_AWS_355:need ability to analyze all IAM policies
   count  = var.enable_breakglass_provisioning ? 1 : 0
   name   = "github-breakglass-role-analyzer-access"
   role   = module.breakglass_role_readonly[0].iam_role_name
