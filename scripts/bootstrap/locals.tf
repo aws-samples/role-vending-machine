@@ -62,20 +62,6 @@ locals {
       }
     ]
   })
-  rvm_breakglass_analyzer_policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        "Effect" : "Allow",
-        "Action" : [
-          "access-analyzer:List*",
-          "access-analyzer:ValidatePolicy",
-          "access-analyzer:Check*"
-        ],
-        "Resource" : "*"
-      }
-    ]
-  })
   terraform_state_policy = jsonencode({
     "Version" : "2012-10-17",
     "Statement" : [

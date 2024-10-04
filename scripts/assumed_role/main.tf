@@ -33,6 +33,26 @@ resource "aws_iam_role_policy" "github_assume_role_rvm_management" {
   })
 }
 
+resource "aws_iam_role_policy" "github_assume_role_breakglass_management" {
+  count = var.enable_breakglass_provisioning ? 1 : 0
+  name  = "github-assume-role-breakglass-management"
+  role  = module.github_assume_role_rvm.iam_role_name
+  policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Action" : [
+          "iam:*Role*",
+        ],
+        "Resource" : [
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/breakglass/*"
+        ]
+      }
+    ]
+  })
+}
+
 # Create a read-only role that can be assumed by read-only RVM workflows
 module "github_assume_role_rvm_readonly" {
   #checkov:skip=CKV_TF_1:cannot provide commit hash for TF repository

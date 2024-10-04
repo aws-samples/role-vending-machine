@@ -103,6 +103,17 @@ jobs:
       # GitHUB PR has 65k character limit: https://github.com/robburger/terraform-pr-commenter/issues/6
       #    echo "$PLAN" >> $GITHUB_ENV
       
+      - name: Install IAM Policy Validator for Terraform
+        if: ${{ steps.plan.outputs.exitcode == '2' }}
+        run: pip install tf-policy-validator
+
+      - name: IAM Policy Validator for Terraform
+        if: ${{ steps.plan.outputs.exitcode == '2' }}
+        run: |
+          VALIDATOR_PATH=$(python -c "import iam_check; print(iam_check.__path__[0])")
+          terraform show -json terraform.tfplan > tf.json
+          tf-policy-validator validate --config $VALIDATOR_PATH/config/default.yaml --template-path tf.json --region ${{ steps.dotenv.outputs.aws_region }} --treat-finding-type-as-blocking ${{ steps.dotenv.outputs.iam_blocker }}    
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -130,18 +141,7 @@ jobs:
         if: steps.configure-breakglass-creds.outcome == 'success'
         id: extract_roles
         run: |
-          python3 $GITHUB_WORKSPACE/scripts/generate_break_glass_urls.py --read-only-mode --tf-state-path state.json --sender-email ${{ steps.dotenv.outputs.breakglass_sender_email }}
-
-      - name: Install IAM Policy Validator for Terraform
-        if: ${{ steps.plan.outputs.exitcode == '2' }}
-        run: pip install tf-policy-validator
-
-      - name: IAM Policy Validator for Terraform
-        if: ${{ steps.plan.outputs.exitcode == '2' }}
-        run: |
-          VALIDATOR_PATH=$(python -c "import iam_check; print(iam_check.__path__[0])")
-          terraform show -json terraform.tfplan > tf.json
-          tf-policy-validator validate --config $VALIDATOR_PATH/config/default.yaml --template-path tf.json --region ${{ steps.dotenv.outputs.aws_region }} --treat-finding-type-as-blocking ${{ steps.dotenv.outputs.iam_blocker }}      
+          python3 $GITHUB_WORKSPACE/scripts/generate_break_glass_urls.py --read-only-mode --tf-state-path state.json --sender-email ${{ steps.dotenv.outputs.breakglass_sender_email }}  
       
       - name: Put Plan in Env Var
         if: steps.plan.outcome == 'success'
