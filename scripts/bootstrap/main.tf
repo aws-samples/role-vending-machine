@@ -64,6 +64,7 @@ resource "aws_iam_role_policy" "workflow_role_management" {
 ### IAM Role with OIDC trust for creating break glass role ###
 module "breakglass_role" {
   #checkov:skip=CKV_TF_1:cannot provide commit hash for TF repository
+  #checkov:skip=CKV_AWS_355:need ability to analyze all IAM policies
   count                          = var.enable_breakglass_provisioning ? 1 : 0
   source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
   version                        = "5.30.0"
@@ -100,6 +101,7 @@ resource "aws_iam_role_policy" "breakglass_role_analyzer" {
 
 module "breakglass_role_readonly" {
   #checkov:skip=CKV_TF_1:cannot provide commit hash for TF repository
+  #checkov:skip=CKV_AWS_355:need ability to analyze all IAM policies
   count                          = var.enable_breakglass_provisioning ? 1 : 0
   source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
   version                        = "5.30.0"
