@@ -91,6 +91,13 @@ resource "aws_iam_role_policy" "breakglass_ses_access" {
   policy = local.rvm_breakglass_ses_policy
 }
 
+resource "aws_iam_role_policy" "breakglass_role_analyzer" {
+  count  = var.enable_breakglass_provisioning ? 1 : 0
+  name   = "github-breakglass-role-analyzer-access"
+  role   = module.breakglass_role[0].iam_role_name
+  policy = local.rvm_breakglass_analyzer_policy
+}
+
 module "breakglass_role_readonly" {
   #checkov:skip=CKV_TF_1:cannot provide commit hash for TF repository
   count                          = var.enable_breakglass_provisioning ? 1 : 0
@@ -105,4 +112,11 @@ module "breakglass_role_readonly" {
     # Optional: GitHub environments can also be used to delegate trust, beyond just branch names
     # "repo:${var.github_organization}/${var.github_repo}:environment:${var.github_environment}"
   ]
+}
+
+resource "aws_iam_role_policy" "breakglass_role_readonly_analyzer" {
+  count  = var.enable_breakglass_provisioning ? 1 : 0
+  name   = "github-breakglass-role-analyzer-access"
+  role   = module.breakglass_role_readonly[0].iam_role_name
+  policy = local.rvm_breakglass_analyzer_policy
 }
