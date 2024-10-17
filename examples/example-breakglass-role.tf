@@ -8,7 +8,7 @@ module "example-break-glass-PRD" {
   }
 
   # Specify the least permissions required for break glass access
-  inline_policy = data.aws_iam_policy_document.example-pod-identity_Production_permissions.json
+  inline_policy = data.aws_iam_policy_document.example-breakglass_Production_permissions.json
 
 
   rvm_account_id = var.rvm_account_id
@@ -23,7 +23,7 @@ module "example-break-glass-PRD" {
   role_name = "test-break-glass-role"
 }
 
-data "aws_iam_policy_document" "example-pod-identity_Production_permissions" {
+data "aws_iam_policy_document" "example-breakglass_Production_permissions" {
   # Specify the permissions that your workflow role needs using this resource
   statement {
     sid    = "CreateS3buckets"
