@@ -7,9 +7,10 @@ module "state_management" {
 # The read-only and non-read-only roles have identical permissions policies, but...
 # ...the read-only role is only able to assume read-only roles in member accounts
 module "workflow_role_readonly" {
+  count = var.is_proto_rvm ? 0 : 1
   #checkov:skip=CKV_TF_1:cannot provide commit hash for TF repository
   source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version                        = "5.30.0"
+  version                        = "5.48.0"
   create_role                    = true
   role_name                      = "${var.iam_role_name}-readonly"
   provider_url                   = "https://token.actions.githubusercontent.com"
@@ -17,25 +18,29 @@ module "workflow_role_readonly" {
   oidc_fully_qualified_subjects  = ["repo:${var.github_organization}/${var.github_repo}:pull_request"]
 }
 resource "aws_iam_role_policy_attachment" "workflow_role_readonly_state_access" {
-  role       = module.workflow_role_readonly.iam_role_name
+  count      = var.is_proto_rvm ? 0 : 1
+  role       = module.workflow_role_readonly[0].iam_role_name
   policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
 }
 resource "aws_iam_role_policy" "workflow_role_readonly_state_access" {
+  count  = var.is_proto_rvm ? 0 : 1
   name   = "tf-remote-state-access"
-  role   = module.workflow_role_readonly.iam_role_name
+  role   = module.workflow_role_readonly[0].iam_role_name
   policy = local.terraform_state_policy
 }
 resource "aws_iam_role_policy" "workflow_role_management_readonly" {
+  count  = var.is_proto_rvm ? 0 : 1
   name   = "github-workflow-role-management-readonly"
-  role   = module.workflow_role_readonly.iam_role_name
+  role   = module.workflow_role_readonly[0].iam_role_name
   policy = local.rvm_readonly_assumption_policy
 }
 
 ### IAM Role with OIDC trust for creating resources ###
 module "workflow_role" {
+  count = var.is_proto_rvm ? 0 : 1
   #checkov:skip=CKV_TF_1:cannot provide commit hash for TF repository
   source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version                        = "5.30.0"
+  version                        = "5.48.0"
   create_role                    = true
   role_name                      = var.iam_role_name
   provider_url                   = "https://token.actions.githubusercontent.com"
@@ -46,18 +51,30 @@ module "workflow_role" {
     # "repo:${var.github_organization}/${var.github_repo}:environment:${var.github_environment}"
   ]
 }
+
+### Proto-RVM IAM role that trusts a specific SSO permission set in the IAM Admin account
+module "proto_rvm_workflow_role" {
+  count = var.is_proto_rvm ? 1 : 0
+  #checkov:skip=CKV_TF_1:cannot provide commit hash for TF repository
+  source                          = "terraform-aws-modules/iam/aws//modules/iam-assumable-role"
+  version                         = "5.48.0"
+  create_role                     = true
+  create_custom_role_trust_policy = true
+  role_name                       = var.iam_role_name
+  custom_role_trust_policy        = data.aws_iam_policy_document.proto_rvm_sso_trust.json
+}
 resource "aws_iam_role_policy_attachment" "workflow_role_state_access" {
-  role       = module.workflow_role.iam_role_name
+  role       = var.is_proto_rvm ? module.proto_rvm_workflow_role[0].iam_role_name : module.workflow_role[0].iam_role_name
   policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
 }
 resource "aws_iam_role_policy" "workflow_role_state_access" {
   name   = "tf-remote-state-access"
-  role   = module.workflow_role.iam_role_name
+  role   = var.is_proto_rvm ? module.proto_rvm_workflow_role[0].iam_role_name : module.workflow_role[0].iam_role_name
   policy = local.terraform_state_policy
 }
 resource "aws_iam_role_policy" "workflow_role_management" {
   name   = "github-workflow-role-management"
-  role   = module.workflow_role.iam_role_name
+  role   = var.is_proto_rvm ? module.proto_rvm_workflow_role[0].iam_role_name : module.workflow_role[0].iam_role_name
   policy = local.rvm_assumption_policy
 }
 
@@ -67,7 +84,7 @@ module "breakglass_role" {
   #checkov:skip=CKV_AWS_355:need ability to analyze all IAM policies
   count                          = var.enable_breakglass_provisioning ? 1 : 0
   source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version                        = "5.30.0"
+  version                        = "5.48.0"
   create_role                    = true
   role_name                      = var.breakglass_role_name
   provider_url                   = "https://token.actions.githubusercontent.com"
@@ -97,7 +114,7 @@ module "breakglass_role_readonly" {
   #checkov:skip=CKV_AWS_355:need ability to analyze all IAM policies
   count                          = var.enable_breakglass_provisioning ? 1 : 0
   source                         = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version                        = "5.30.0"
+  version                        = "5.48.0"
   create_role                    = true
   role_name                      = "${var.breakglass_role_name}-readonly"
   provider_url                   = "https://token.actions.githubusercontent.com"

@@ -55,3 +55,15 @@ variable "bucket_suffix" {
   description = "The suffix (after the account ID) that identifies the Terraform S3 state bucket."
   default     = "tf-remote-state"
 }
+
+variable "is_proto_rvm" {
+  type        = bool
+  description = "If you are bootstrapping Proto-RVM (a fork of RVM that does not use OIDC) set this to true."
+  default     = false
+}
+
+variable "trusted_sso_permission_set" {
+  type        = string
+  description = "In ProtoRVM, the SSO permission set that is trusted to assume the RVM role in the IAM admin account."
+  default     = "" # eg. AWSAdministratorAccess
+}

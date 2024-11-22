@@ -5,7 +5,7 @@ import requests
 import argparse
 import boto3
 
-AWS_REGION = "us-east-2"  # TODO - update to your desired region
+AWS_REGION = "us-east-1"  # TODO - update to your desired region
 RVM_ROLE = "github-assume-role-rvm"
 GITHUB_REPO = os.getenv("GITHUB_REPO")
 GITHUB_ORG = os.getenv("GITHUB_ORG")
@@ -13,13 +13,14 @@ VARIABLES_OUTPUT_FILE_NAME = "zz-do-not-modify-variables-accounts.tf"
 PROVIDERS_OUTPUT_FILE_NAME = "zz-do-not-modify-providers.tf"
 READONLY_PROVIDERS_OUTPUT_FILE_NAME = "zz-do-not-modify-providers-readonly.tf"
 
-if os.environ.get("GITHUB_TOKEN") is None:
-    raise EnvironmentError("GITHUB_TOKEN is not set in the environment")
-else:
-    headers = {
-        "Authorization": "Bearer " + os.getenv("GITHUB_TOKEN"),
-        "Accept": "application/vnd.github+json",
-    }
+
+# if os.environ.get("GITHUB_TOKEN") is None:
+#     raise EnvironmentError("GITHUB_TOKEN is not set in the environment")
+# else:
+#     headers = {
+#         "Authorization": "Bearer " + os.getenv("GITHUB_TOKEN"),
+#         "Accept": "application/vnd.github+json",
+#     }
 
 
 # def get_account_list():

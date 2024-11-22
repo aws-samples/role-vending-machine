@@ -1,56 +1,19 @@
-# Role Vending Machine
+# Proto-RVM: A Role Vending Machine Step-Stone for Customers without OIDC-enabled CI/CD Platforms
 
-The Role Vending Machine (RVM) solution enables developers to get the right role permissions and trust policy, while reducing the undifferentiated heavy lifting of trust policy management and role creation. Security teams can audit (or require review on) the RVM repository to ensure that best practices for IAM roles are being met. The central nature of RVM also allows for the security team to include automated code scanning into the pipeline and enforce standards (ranging from naming conventions to permission boundaries). Out of the box, RVM offers [checkov](https://github.com/bridgecrewio/checkov) scanning for Terraform templates, and [IAM Access Analyzer policy validation](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-validation.html) using [IAM Policy Validator for Terraform](https://github.com/awslabs/terraform-iam-policy-validator).
+The Role Vending Machine (RVM) solution enables developers to get the right role permissions and trust policy, while reducing the undifferentiated heavy lifting of trust policy management and role creation. Security teams can audit (or require review on) the RVM repository to ensure that best practices for IAM roles are being met. The central nature of RVM also allows for the security team to include automated code scanning into the pipeline and enforce standards (ranging from naming conventions to permission boundaries).
 
-RVM uses GitHub Actions to automate the role creation and deployment process. There are two main types of roles that you can create and manage using the Role Vending Machine:
+Proto-RVM is an RVM fork designed for customers that do not have a CI/CD platform that supports OIDC. Because of this, the trust policies that can be used are more limited. Proto-RVM is designed to trust specified SSO roles so that individuals can leverage the RVM-provisioned roles for specific IaC deployments.
 
-- **Machine Roles**: These are roles that are intended to be used by AWS services or GitHub Actions to access resources on behalf of the service or application. They provide the necessary permissions for the service to perform its intended functions.
-- **Break Glass Access Roles**: These are special roles that provide emergency or temporary access to AWS accounts, for example if your main IdP provider is experiencing an outage and you need console access to your AWS accounts.
-
-## Machine roles
-
-RVM allows developers to create roles for three different types of principals: GitHub pipelines, EKS pods, and other AWS services. Developers will commit Terraform files outlining required permissions and other essential details for their workload to RVM repository. When they create a pull request, a GitHub workflow initiates a Terraform plan to summarize the deployment changes, scans the Terraform template using Checkov, validates the submitted IAM policies against [IAM Access Analyzer policy check references](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-reference-policy-checks.html), and adds this information to the pull request. Following a review and approval, and after merging the pull request, another workflow executes the Terraform apply command to deploy the proposed role in the target AWS account.
-
-![RVM Workflow](assets/rvm-workflow.png)
-
-## Break Glass Access Roles
-
-Break glass access refers to a quick, emergency means for a person who does not normally have access privileges to certain AWS accounts to gain access in exceptional circumstances. This is done by using an approved process, similar to breaking the glass to trigger a fire alarm. The key use cases for break glass access include:
-
-- Failure of the organization's identity provider (IdP)
-- Security incidents involving the organization's IdP(s)
-- Failures with IAM Identity Center
-- Disasters resulting in the loss of the organization's cloud or identity management teams
-
-![RVM Break Glass](assets/breakglass.png)
-
-The Role Vending Machine takes a unique approach to managing break glass access, rather than creating dedicated break glass user accounts and roles in each AWS account. Instead, it:
-
-- Creates a role with the requested permissions when break glass access is needed, deploying it directly in the target account.
-- Emails a temporary console sign-in URL to the requester upon approval of the role creation. This URL is valid for only 15 minutes and does not require a username or password.
-
-This approach has several advantages over traditional break glass methods:
-
-1. Reduces the attack surface and operational overhead of managing break glass user and roles across all accounts.
-2. Ensures the break glass role is provisioned with only the permissions approved by the security team, applying the principle of least privilege.
-3. Provides a streamlined, secure way to grant emergency access without requiring user credentials.
-
-> [!NOTE]
-> The maximum console session time for these break glass roles is limited to 1 hour, due to role chaining limitations.
-> view "Additional resources" section of [IAM Roles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html#iam-term-role-chaining) on AWS documentations for more information.
-
-> [!CAUTION]
-> Be careful with this repository! RVM is inherently very powerful and you should add branch protection and PR reviews to ensure that unwanted changes are not made.
-> Learn more about branch protection [here](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
+The intent is for Proto-RVM customers to eventually switch to main-line RVM once they are on a supported platform.
 
 ## Prerequisites
 
-Before deploying RVM, ensure you meet the following prerequisites:
+Before deploying Proto-RVM, ensure you meet the following prerequisites:
 
-- A GitHub Organization (GitHub Enterprise/Premium/Ultimate are not required.)
+- A version-control system such as CodeCommit, Gitlab, or BitBucket. 
 - A multi-account AWS environment (does not need to be part of AWS Organizations)
 - A mechanism for deploying an IAM role used by Role Vending Machine in all AWS accounts (e.g., AFT, StackSets)
-- Terraform (v1.3+)
+- Terraform (v1.3+; v1.9+ for cross-variable validation)
 - AWS Terraform Provider (v4+)
 
 ## Getting started
@@ -62,13 +25,7 @@ Before deploying RVM, ensure you meet the following prerequisites:
 3. Follow the guide [here](https://docs.github.com/en/get-started/getting-started-with-git/managing-remote-repositories#adding-a-remote-repository) to add your repository as a remote repository.
 4. Follow the guide [here](https://docs.github.com/en/get-started/using-git/pushing-commits-to-a-remote-repository) to push the files to your organization repository.
 
-### Step 2: Allow the Organization’s pipeline to create pull requests (PR)
-
-This step is only necessary if you want to allow the *Generate Providers and Account Variables* workflow to create PRs. This workflow updates the Terraform providers file to include new AWS Organization’ account. View [Managing GitHub Actions settings for a repository](https://docs.github.com/en/enterprise-server@3.10/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#preventing-github-actions-from-creating-or-approving-pull-requests) to learn how to allow or GitHub Actions workflows to creating pull requests.
-
-*Note*: you can create the providers manually, and skip this step.
-
-### Step 3: Designate an AWS account for Role Vending machine and delegate required permissions
+### Step 2: Designate an AWS account for Role Vending machine and delegate required permissions
 
 Select or create an account in your AWS Organization to deploy RVM resources (for example, an `IamAdmin` account). If you plan to use *Generate Providers and Account Variables* workflow, you need to provide the RVM account with necessary permissions to list your organization's accounts. View [Delegated administrator for AWS Organizations](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_delegate_policies.html) for more information. Below is an example of the permissions required for the workflow to run properly:
 
@@ -100,13 +57,15 @@ Replace the `<YOUR RVM Account ID>` in the policy above with RVM's account ID.
 
 ### Step 4: Prepare the repository to Bootstrap the RVM repository
 
+While regular RVM operates by configuring the `github-workflow-rvm` role to trust the RVM repository's `main` branch, Proto-RVM does not have a GitHub repo. Therefore, Proto-RVM will need to establish a root source of Proto-RVM trust. Because Proto-RVM relies on SSO roles for its trust, the Proto-RVM bootstrap process will require a permission set to be passed to it. The associated IAM role for that permission set in the IAM Admin account will be able to assume `github-workflow-rvm` and run `terraform` actions using that role.
+
+Proto-RVM also does not create a `read-only` version of `github-workflow-rvm`.
+
 Provide necessary information to prepare the repository for bootstrapping. Below is a list of files you need to modify:
 
-1. `.github/workflows/.env`: provide RVM account ID (`TF_VAR_rvm_account_id` variable), AWS region, your GitHub organization name, and the level of IAM Access Analyzer finding that will break the pipeline. All other fields are optional to update.
-2. `scripts/generate_providers_and_account_vars.py`: provide the main AWS region you operate in[^1].
-3. Navigate to `bootstrap` folder under scripts folder.
-   1. Update `terraform.tfvars` file with your GitHub organization name and the default AWS region where RVM resources are deployed into.
-   2. Optionally, review the variables in `variables.tf` file and set your desired values in `terraform.tfvars` file. For example, if you want to deploy Terraform backend resources deployed in the RVM account, set the value of `create_tf_state_management_infrastructure` variable to `true`. If you want to use a repo name other than "role-vending-machine" (for example, if you use underscores instead of hyphens), you can set that in `terraform.tfvars` as well. If you are changing `breakglass_role_name` and `iam_role_name` default values, ensure you change the corresponding values in `.github/workflows/.env` as well.
+1. `scripts/generate_providers_and_account_vars.py`: provide the main AWS region you operate in[^1].
+2. Navigate to `bootstrap` folder under scripts folder.
+   1. Update `terraform.tfvars` file with your VCS (eg. GitHub) organization name and the default AWS region where RVM resources are deployed into, and any other variables that need updates.
 
 [^1]: IAM resources are global, of course; the Region you specify in `generate_providers_and_account_vars.py` is used to create the AWS providers in each account, this can later be used with Terraform data structures to dynamically reference the Region in your policies.
 
@@ -116,12 +75,12 @@ For RVM to operate properly you need to have certain resources deployed in your 
 
 - RVM main roles in RVM account[^2]
 - An IAM OIDC provider in both RVM and target accounts[^3]
-- A verified email and domain with [Amazon Simple Email Service](https://docs.aws.amazon.com/ses/latest/dg/Welcome.html) [^4]
+- If using breakglass role functionality: A verified email and domain with [Amazon Simple Email Service](https://docs.aws.amazon.com/ses/latest/dg/Welcome.html) [^4]
 - "Optional" Terraform backend resources (S3 bucket and DynamoDB table)
 
 [^2]: RVM uses two main roles with different permissions. One with read only permissions used with `terraform plan` action, and one with write permissions used with `terraform apply` action to deploy roles into target accounts.
 
-[^3]: IAM OIDC providers are used by GitHub workflows to assume roles in AWS accounts.
+[^3]: IAM OIDC providers are used by GitHub workflows to assume roles in AWS accounts. In Proto-RVM, these are not used, though you'll need to create them if you migrate to main-line RVM.
 
 [^4]: To send emails from Amazon SES to your organization's email addresses, you must first [verify](https://docs.aws.amazon.com/ses/latest/dg/creating-identities.html) the domain you will be sending from by adding the necessary DNS records to your domain's configuration.
 

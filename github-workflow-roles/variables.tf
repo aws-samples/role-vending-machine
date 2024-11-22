@@ -26,6 +26,10 @@ variable "repository_name" {
   description = "Github Repository name"
   type        = string
   default     = null
+  validation {
+    condition     = (contains(["sso", "github", "breakglass"], var.principal_type)) != (var.repository_name == null)
+    error_message = "If the principal type is SSO/GitHub/Breakglass, you must provide a repository name."
+  }
 }
 
 variable "role_description" {
@@ -76,13 +80,13 @@ variable "inline_policy_readonly" {
 }
 
 variable "principal_type" {
-  description = "Type of principal assuming the role (github, service, pod, breakglass)"
+  description = "Type of principal assuming the role (github, service, pod, breakglass, sso)"
   type        = string
   default     = "github"
 
   validation {
-    condition     = contains(["github", "service", "pod", "breakglass"], var.principal_type)
-    error_message = "The principal_type must be one of: github, service, pod, or breakglass."
+    condition     = contains(["github", "service", "pod", "breakglass", "sso"], var.principal_type)
+    error_message = "The principal_type must be one of: github, service, pod, breakglass, or sso."
   }
 }
 
@@ -99,14 +103,14 @@ variable "github_branch" {
   default     = "main"
 }
 
-variable "github_organization_name" {
-  description = "Name of the GitHub Organization - Required if 'principal_type' is 'github'"
+variable "vcs_organization_name" {
+  description = "Name of the VCS Organization - Required if 'principal_type' is 'github'. This may be a GitHub Organization, BitBucket Organization, etc."
   type        = string
   default     = null
   # Note: cross-variable validation conditions are only supported in Terraform v1.9+. Comment out this validation block if you are on an older version of TF.
   validation {
-    condition     = var.github_organization_name == null || (var.github_organization_name != null && (var.principal_type == "github" || var.principal_type == "breakglass"))
-    error_message = "The github_organization_name variable is required when the principal_type is 'github' or 'breakglass'."
+    condition     = var.vcs_organization_name == null || (var.vcs_organization_name != null && contains(["github", "breakglass", "sso"], var.principal_type))
+    error_message = "The vcs_organization_name variable is required when the principal_type is 'github' or 'breakglass'."
   }
 }
 
@@ -199,5 +203,15 @@ variable "rvm_account_id" {
   description = "Account ID of the RVM account"
   type        = string
   default     = ""
+}
 
+variable "trusted_sso_permission_sets" {
+  description = "List of SSO permission sets whose assigned roles are allowed to assume this workflow role."
+  type        = list(string)
+  default     = [] # Example: ["AWSAdministratorAccess", "AWSPowerUserAccess"]
+  validation {
+    # Note: this validation logic is cross-variable and only supported in Terraform 1.9+ 
+    condition     = (length(var.trusted_sso_permission_sets) != 0) == (var.principal_type == "sso")
+    error_message = "The trust_sso_roles variable is only usable with the sso principal_type."
+  }
 }
