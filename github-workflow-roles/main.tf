@@ -6,10 +6,10 @@ locals {
   aws_account_id = var.aws_account_id != "" ? var.aws_account_id : data.aws_caller_identity.current.account_id
   rvm_account_id = var.rvm_account_id != "" ? var.rvm_account_id : null
 
-  github_organization_name = contains(["github", "breakglass", "sso"], var.principal_type) ? var.vcs_organization_name : null
+  github_organization_name = var.principal_type == "github" || var.principal_type == "breakglass" ? var.github_organization_name : null
 
-  role_name        = contains(["sso", "github"], var.principal_type) ? coalesce(var.role_name, "${var.repository_name}-repo-role") : var.role_name
-  role_description = contains(["sso", "github"], var.principal_type) ? "Workflow Role for ${local.github_organization_name}/${var.repository_name}" : coalesce(var.role_description, "IAM role created for by Role Vending Machine")
+  role_name        = var.principal_type == "github" ? coalesce(var.role_name, "${var.repository_name}-repo-role") : var.role_name
+  role_description = var.principal_type == "github" ? "Github Workflow Role for ${local.github_organization_name}/${var.repository_name}" : coalesce(var.role_description, "IAM role created for by Role Vending Machine")
 
   github_environment = var.github_environment != "" ? "repo:${local.github_organization_name}/${var.repository_name}:environment:${var.github_environment}" : ""
 
@@ -44,16 +44,13 @@ locals {
     include_org_condition     = true
   }
 
-  sso_arns = var.principal_type == "sso" ? [for permission_set_name in var.trusted_sso_permission_sets : "arn:aws:iam::${local.aws_account_id}:role/aws-reserved/sso.amazonaws.com/AWSReservedSSO_${permission_set_name}_*"] : []
-
   path = var.principal_type == "breakglass" ? "/breakglass/" : "/RVM/"
-  tags = {
-    repository     = contains(["github", "sso"], var.principal_type) ? var.repository_name : null
+  tags ={
     principal_type = var.principal_type
-    role_arn       = "arn:aws:iam::${local.aws_account_id}:role${local.path}${local.role_name}"
-    create_date    = timestamp()
-    requester      = var.principal_type == "breakglass" ? var.breakglass_user_alias : null
-    email          = var.principal_type == "breakglass" ? var.breakglass_user_email : null
+    role_arn = "arn:aws:iam::${local.aws_account_id}:role${local.path}${local.role_name}"
+    create_date = timestamp()
+    requester = var.principal_type == "breakglass" ? var.breakglass_user_alias : null
+    email = var.principal_type == "breakglass" ? var.breakglass_user_email : null
   }
 }
 
@@ -74,7 +71,7 @@ resource "aws_iam_role" "main" {
   assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
 
   tags = merge(var.tags, local.tags)
-
+  
   lifecycle {
     ignore_changes = [tags["create_date"]]
   }
@@ -83,12 +80,12 @@ resource "aws_iam_role" "main" {
 data "aws_iam_policy_document" "assume_role_policy" {
   statement {
     effect  = "Allow"
-    actions = var.principal_type == "pod" ? ["sts:AssumeRole", "sts:TagSession"] : var.principal_type == "service" || contains(["breakglass", "sso"], var.principal_type) ? ["sts:AssumeRole"] : ["sts:AssumeRoleWithWebIdentity"]
+    actions = var.principal_type == "pod" ? ["sts:AssumeRole", "sts:TagSession"] : var.principal_type == "service" || var.principal_type == "breakglass" ? ["sts:AssumeRole"] : ["sts:AssumeRoleWithWebIdentity"]
 
     principals {
-      type = var.principal_type == "github" ? "Federated" : contains(["breakglass", "sso"], var.principal_type) ? "AWS" : "Service"
+      type = var.principal_type == "github" ? "Federated" : var.principal_type == "breakglass" ? "AWS" : "Service"
 
-      identifiers = var.principal_type == "github" ? ["arn:aws:iam::${local.aws_account_id}:oidc-provider/token.actions.githubusercontent.com"] : var.principal_type == "pod" ? ["pods.eks.amazonaws.com"] : var.principal_type == "breakglass" ? ["arn:aws:iam::${local.rvm_account_id}:role/github-breakglass-rvm"] : var.principal_type == "sso" ? ["*"] : var.service_name
+      identifiers = var.principal_type == "github" ? ["arn:aws:iam::${local.aws_account_id}:oidc-provider/token.actions.githubusercontent.com"] : var.principal_type == "pod" ? ["pods.eks.amazonaws.com"] : var.principal_type == "breakglass" ? ["arn:aws:iam::${local.rvm_account_id}:role/github-breakglass-rvm"] : var.service_name
     }
 
     dynamic "condition" {
@@ -171,16 +168,6 @@ data "aws_iam_policy_document" "assume_role_policy" {
         values   = [condition.value]
       }
     }
-
-
-    dynamic "condition" {
-      for_each = var.principal_type == "sso" && length(local.sso_arns) > 0 ? [1] : []
-      content {
-        test     = "ArnLike"
-        variable = "aws:PrincipalArn"
-        values   = local.sso_arns
-      }
-    }
   }
 }
 
@@ -193,8 +180,8 @@ resource "aws_iam_role_policy_attachment" "custom" {
 
 resource "aws_iam_role_policy" "workflow_role_state_access" {
   count = var.principal_type == "github" ? 1 : 0
-  name  = "tf-remote-state-access"
-  role  = aws_iam_role.main.name
+  name = "tf-remote-state-access"
+  role = aws_iam_role.main.name
   policy = jsonencode({
     "Version" : "2012-10-17",
     "Statement" : [

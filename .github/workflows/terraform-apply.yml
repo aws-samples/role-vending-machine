@@ -1,0 +1,195 @@
+name: "Terraform Apply"
+
+env:
+  TF_LOG_PATH: ./terraform.log
+  TF_LOG: INFO #TRACE, DEBUG, INFO, WARN or ERROR
+
+permissions:
+  id-token: write
+  contents: read # This is required for actions/checkout
+  pull-requests: write
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - role-vending-machine/**
+  workflow_dispatch:
+    inputs:
+      #checkov:skip=CKV_GHA_7:inputs constrained by options
+      TerraformLogLevel:
+        description: "Terraform Log Level"
+        required: false
+        default: "INFO"
+        type: choice
+        options:
+          - TRACE
+          - DEBUG
+          - INFO
+          - WARN
+          - ERROR
+
+jobs:
+  inform_about_apply:
+    name: Inform About Apply
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Inform on PR that Apply is Running
+        uses: mshick/add-pr-comment@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          # repo-token-user-login: "github-actions[bot]"
+          message: |
+            ***Running terraform apply***
+            Results will display here momentarily...
+
+  terraform-apply:
+    name: "Terraform Apply"
+    runs-on: ubuntu-latest
+    env:
+      TF_LOG: ${{ inputs.TerraformLogLevel }}
+    defaults:
+      run:
+        working-directory: role-vending-machine/
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Source Environment Variables
+        id: dotenv
+        uses: falti/dotenv-action@v1.0.4
+        with:
+          path: ".github/workflows/.env"
+
+      - name: Set Environment Variables
+        uses: c-py/action-dotenv-to-setenv@v5
+        with:
+          env-file: ".github/workflows/.env"
+
+      - name: Remove Readonly Providers File
+        run: rm zz-do-not-modify-providers-readonly.tf
+
+      - name: Configure AWS Credentials for creating resources
+        #if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.TF_VAR_rvm_account_id }}:role/${{ steps.dotenv.outputs.aws_workflow_role }}
+          role-session-name: ${{ github.actor }}_${{ github.job }}
+          aws-region: ${{ steps.dotenv.outputs.aws_region }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.dotenv.outputs.TERRAFORM_VERSION }}
+
+      # - name: Get GitHub Apps Token # This enables access to Terraform modules in internal/private repos
+      #   id: get_token
+      #   uses: machine-learning-apps/actions-app-token@master
+      #   with:
+      #     APP_PEM: ${{ secrets.ORG_REPO_READ_PRIVATE_KEY }}
+      #     APP_ID: ${{ secrets.ORG_REPO_READ_APP_ID }}
+      #   # Doc: https://github.com/machine-learning-apps/actions-app-token
+      # - name: Enable Terraform Git actions to use Github Apps Token
+      #   uses: de-vri-es/setup-git-credentials@v2.0.10
+      #   with:
+      #     credentials: https://git:${{ steps.get_token.outputs.app_token }}@github.com
+      # Doc: https://maelvls.dev/gh-actions-with-tf-private-repo/
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -input=false -out=terraform.tfplan
+        continue-on-error: true
+
+      - name: Terraform Apply
+        id: apply
+        #if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -input=false -no-color terraform.tfplan
+        continue-on-error: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip" # caching pip dependencies
+      - run: pip install -r $GITHUB_WORKSPACE/scripts/requirements.txt
+
+      - name: Export Terraform State to JSON
+        id: read_state
+        run: terraform show -json > state.json
+
+      # The member accounts' Breakglass roles are configured to trust the RVM breakglass role, NOT the "main" RVM role. Thus, we change creds.
+      # "But why not just assume the new role in the Python script...?" That's role-chaining, and that has limitations! It's also harder to debug.
+      - name: Configuring AWS Credentials w/ Break Glass Role
+        if: steps.dotenv.outputs.aws_breakglass_role
+        id: configure-breakglass-credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          unset-current-credentials: true
+          role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.TF_VAR_rvm_account_id }}:role/${{ steps.dotenv.outputs.aws_breakglass_role }}
+          role-session-name: ${{ github.actor }}_${{ github.job }}
+          aws-region: ${{ steps.dotenv.outputs.aws_region }}
+
+      - name: Extract Breakglass Roles
+        if: steps.configure-breakglass-credentials.outcome == 'success'
+        id: extract_roles
+        run: |
+          python3 $GITHUB_WORKSPACE/scripts/generate_break_glass_urls.py --tf-state-path state.json --sender-email ${{ steps.dotenv.outputs.breakglass_sender_email }}
+
+      - name: Post Apply Success to GitHub PR
+        if: steps.apply.outcome == 'success'
+        uses: mshick/add-pr-comment@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token-user-login: "github-actions[bot]"
+          message: |
+            Applying Terraform:
+
+            ```
+            ${{ steps.apply.outputs.stdout }}
+            ```
+
+      - name: Post Apply Failure to GitHub PR
+        if: steps.apply.outcome == 'failure'
+        uses: mshick/add-pr-comment@v2
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token-user-login: "github-actions[bot]"
+          message: |
+            Apply failed for Terraform:
+
+            ```
+            ${{ steps.apply.outputs.stderr }}
+            ```
+      
+      # - name: Notify Mirosoft Teams On Success
+      #   if: steps.apply.outcome == 'success'
+      #   uses: jdcargile/ms-teams-notification@v1.3
+      #   with:
+      #     github-token: ${{ github.token }} # this will use the runner's token.
+      #     ms-teams-webhook-uri: ${{ secrets.TEAMS_WEBHOOK }}
+      #     notification-summary: Terraform Apply Succeeded
+      #     notification-color: 34eb5c #Green
+      #     #timezone: America/Denver
+
+      # - name: Notify Mirosoft Teams On Failure
+      #   if: steps.apply.outcome == 'failure'
+      #   uses: jdcargile/ms-teams-notification@v1.3
+      #   with:
+      #     github-token: ${{ github.token }} # this will use the runner's token.
+      #     ms-teams-webhook-uri: ${{ secrets.TEAMS_WEBHOOK }}
+      #     notification-summary: Terraform Apply Failed
+      #     notification-color: eb4034 #Red
+      #     #timezone: America/Denver
+      
+      - name: Terraform Apply Status
+        if: steps.apply.outcome == 'failure'
+        run: exit 1
