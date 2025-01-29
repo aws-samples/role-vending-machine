@@ -64,7 +64,7 @@ Before deploying RVM, ensure you meet the following prerequisites:
 
 ### Step 2: Allow the Organization’s pipeline to create pull requests (PR)
 
-This step is only necessary if you want to allow the *Generate Providers and Account Variables* workflow to create PRs. This workflow updates the Terraform providers file to include new AWS Organization’ account. View [Managing GitHub Actions settings for a repository](https://docs.github.com/en/enterprise-server@3.10/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#preventing-github-actions-from-creating-or-approving-pull-requests) to learn how to allow or GitHub Actions workflows to creating pull requests.
+This step is only necessary if you want to allow the *Generate Providers and Account Variables* workflow to create PRs. This workflow updates the Terraform providers file to include new AWS Organization’ account. Navigate to your GitHub Organization's Settings >> Actions >> General >> and select Allow the Organization’s pipeline to create pull requests. For more details, view [Managing GitHub Actions settings for a repository](https://docs.github.com/en/enterprise-server@3.10/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#preventing-github-actions-from-creating-or-approving-pull-requests) to learn how to allow or GitHub Actions workflows to create pull requests.
 
 *Note*: you can create the providers manually, and skip this step.
 
@@ -112,20 +112,7 @@ Provide necessary information to prepare the repository for bootstrapping. Below
 
 ### Step 5: Bootstrap the RVM repository
 
-For RVM to operate properly you need to have certain resources deployed in your RVM account and the AWS accounts you are planning to create IAM roles using RVM:
-
-- RVM main roles in RVM account[^2]
-- An IAM OIDC provider in both RVM and target accounts[^3]
-- A verified email and domain with [Amazon Simple Email Service](https://docs.aws.amazon.com/ses/latest/dg/Welcome.html) [^4]
-- "Optional" Terraform backend resources (S3 bucket and DynamoDB table)
-
-[^2]: RVM uses two main roles with different permissions. One with read only permissions used with `terraform plan` action, and one with write permissions used with `terraform apply` action to deploy roles into target accounts.
-
-[^3]: IAM OIDC providers are used by GitHub workflows to assume roles in AWS accounts.
-
-[^4]: To send emails from Amazon SES to your organization's email addresses, you must first [verify](https://docs.aws.amazon.com/ses/latest/dg/creating-identities.html) the domain you will be sending from by adding the necessary DNS records to your domain's configuration.
-
-Figure below, shows the RVM bootstrapping process.
+The figure below shows the RVM bootstrapping process.
 
 ![RVM bootstrapping process](assets/boostrap.png)
 
@@ -146,8 +133,8 @@ Figure below, shows the RVM bootstrapping process.
 ### Step 7: RVM variables and backend setup
 
 1. Update `role_vending_machine/zz-do-not-modify-backend.tf` file with RVM Terraform backend information (note: the "do not modify" directive is aimed at developers using this repository; RVM administrators may modify these manifests).
-2. Commit the result.
-3. From your repository’s main page, click on Actions, under All Workflows sections, click on *Generate Providers and Account Variables workflow*, and run the workflow. This will create the Terraform providers file in your repository.
+2. Commit and push the result.
+3. From your repository’s main page, click on Actions, under All Workflows sections, click on *Generate Providers and Account Variables workflow*, and run the workflow (don't just retry an existing workflow, which will use old source code and fail). This will create a PR with the Terraform providers file in your repository. Merge that pull request into your `main` branch.
 
 ### Step 8 (optional): Fine tuning RVM
 
