@@ -133,13 +133,14 @@ Figure below, shows the RVM bootstrapping process.
 2. From terminal, navigate to `scripts/bootstrap` folder
    1. In the context of your RVM account, run `terraform init` to initiate Terraform.
    2. Run `terraform apply`, review the changes and approve to deploy RVM resources to RVM account. This will deploy IAM Main Role, and optionally Terraform backend resources.
-3. Set up your SES account
-   1. Sign in to the AWS Management Console and open the Amazon SES console at [https://console.aws.amazon.com/ses/](https://console.aws.amazon.com/ses/).
+3. [optional, if using RVM's break glass features] Set up your SES account
+   1. In the RVM Sign in to the AWS Management Console and open the Amazon SES console at [https://console.aws.amazon.com/ses/](https://console.aws.amazon.com/ses/).
    2. Select Get started from the SES console home page and the wizard will walk you through the steps of setting up your SES account.
   
 ### Step 6: Deploying RVM-assumable roles across the AWS Organization
 
 1. Using a method such as AFT or StackSets, deploy the RVM Workflow Role and create an IAM OIDC provider in each account where you expect RVM to deploy roles. You can find Terraform definitions for both of these resources in `scripts/assumed_role` and `scripts/oidc_provider` folders.
+    1. For example, if using AFT, you could copy the above folders into your `aft-global-customizations` repo's `terraform` folder and then update your manifests in the `terraform` folder to call the `assumed_role` and `oidc_provider` modules.
 2. Note that this step includes provisioning the IAM OIDC provider to the RVM account. Subsequent steps will not be possible without the OIDC setup.
 
 ### Step 7: RVM variables and backend setup
