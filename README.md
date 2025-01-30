@@ -70,7 +70,9 @@ This step is only necessary if you want to allow the *Generate Providers and Acc
 
 ### Step 3: Designate an AWS account for Role Vending machine and delegate required permissions
 
-Select or create an account in your AWS Organization to deploy RVM resources (for example, an `IamAdmin` account). If you plan to use *Generate Providers and Account Variables* workflow, you need to provide the RVM account with necessary permissions to list your organization's accounts. View [Delegated administrator for AWS Organizations](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_delegate_policies.html) for more information. Below is an example of the permissions required for the workflow to run properly:
+1. Select or create an account in your AWS Organization to deploy RVM resources (for example, an `IamAdmin` account).
+2. If you plan to use *Generate Providers and Account Variables* workflow (recommended), you need to provide the RVM account with necessary permissions to list your organization's accounts.
+  1. Log into the management account, go to the Organizations service, navigate to Settings, and then use the Delegate Policy feature to delegate permissions to your RVM account. View [Delegated administrator for AWS Organizations](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_delegate_policies.html) for more information. Below is an example of the permissions required for the workflow to run properly:
 
 ```json
 {
