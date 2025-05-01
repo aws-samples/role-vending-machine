@@ -51,6 +51,7 @@ jobs:
       - name: Generate providers
         run: python3 scripts/generate_providers_and_account_vars.py
         env:
+          AWS_REGION: ${{ steps.dotenv.outputs.aws_region }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # ${{ steps.get_token.outputs.app_token }}
 
       - run: echo "DATE=$(date --iso-8601)" >> $GITHUB_ENV
