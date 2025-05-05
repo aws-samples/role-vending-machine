@@ -63,15 +63,10 @@ variable "account_{account_name}" {{
 
 
 def main():
-    # This section was used to support an account list that is maintained in a separate repo
-    # However, it is likely simpler to configure delegated Organizations permissions to list the accounts from a member acct
-    # try:
-    #     # Attempt to grab the account list from a repo with a JSON of the Org's accounts
-    #     account_list = get_account_list()
-    # except Exception:
-    #     # This fallback may fail if Organizations actions are not delegated to the RVM account
-    #     logging.info("Failed to get account list from GitHub, defaulting to AWS list")
-    account_list = boto3.client("organizations").list_accounts()["Accounts"]
+    paginator = boto3.client("organizations").get_paginator("list_accounts")
+    account_list = []
+    for page in paginator.paginate():
+        account_list.extend(page["Accounts"])
 
     if not account_list:
         raise Exception("No accounts found")
