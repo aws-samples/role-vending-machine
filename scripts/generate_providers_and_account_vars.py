@@ -70,6 +70,9 @@ def main():
 
     if not account_list:
         raise Exception("No accounts found")
+    else:
+        # sort the account list so that our output is consistent across runs
+        account_list = sorted(account_list, key=lambda d: d["Name"])
 
     for file_name in [PROVIDERS_OUTPUT_FILE_NAME, READONLY_PROVIDERS_OUTPUT_FILE_NAME]:
         with open(f"role-vending-machine/{file_name}", "w") as f:
