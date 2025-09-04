@@ -46,7 +46,7 @@ jobs:
         run: rm zz-do-not-modify-providers.tf
 
       - name: Configure AWS Credentials for reading state
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::${{ steps.dotenv.outputs.TF_VAR_rvm_account_id }}:role/${{ steps.dotenv.outputs.aws_workflow_role }}-readonly
           role-session-name: ${{ github.actor }}_${{ github.job }}
@@ -129,7 +129,7 @@ jobs:
       # "But why not just assume the new role in the Python script...?" That's role-chaining, and that has limitations! It's also harder to debug.
       - name: Configuring AWS Credentials w/ Break Glass Role
         id: configure-breakglass-creds
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         if: steps.dotenv.outputs.aws_breakglass_role
         with:
           unset-current-credentials: true
