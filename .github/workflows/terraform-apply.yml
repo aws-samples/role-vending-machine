@@ -116,7 +116,7 @@ jobs:
         run: terraform apply -input=false -no-color terraform.tfplan
         continue-on-error: true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: "pip" # caching pip dependencies
