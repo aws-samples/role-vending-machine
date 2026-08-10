@@ -23,7 +23,7 @@ variable "rvm_assume_role_name" {
 }
 
 variable "repository_name" {
-  description = "Github Repository name"
+  description = "Github Repository name. Note that for repositories created or modified after June 15, 2026, an immutable ID is also required: https://github.blog/changelog/2026-04-23-immutable-subject-claims-for-github-actions-oidc-tokens/"
   type        = string
   default     = null
 }

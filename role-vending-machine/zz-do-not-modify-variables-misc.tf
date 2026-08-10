@@ -3,6 +3,11 @@ variable "default_github_organization_name" {
   type        = string
 }
 
+variable "dx_github_org" {
+  description = "Default immutable sub-claim for the Repo Organization"
+  type        = string
+}
+
 variable "rvm_account_id" {
   description = "Account ID of the RVM account."
   type        = string
