@@ -114,7 +114,7 @@ jobs:
           terraform show -json terraform.tfplan > tf.json
           tf-policy-validator validate --config $VALIDATOR_PATH/config/default.yaml --template-path tf.json --region ${{ steps.dotenv.outputs.aws_region }} --treat-finding-type-as-blocking ${{ steps.dotenv.outputs.iam_blocker }}    
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: "pip" # caching pip dependencies
