@@ -151,7 +151,7 @@ jobs:
           echo "${PLAN:0:65536}" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v8
         # env:
         #   ORIG_PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
         with:
